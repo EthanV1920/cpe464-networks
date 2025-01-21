@@ -6,44 +6,51 @@
  */
 
 #include "../inc/ethernet_parse.h"
+#include "../inc/arp_parse.h"
+#include "../inc/ip_parse.h"
+#include "stdlib.h"
 #include "string.h"
+// TODO: change to ether.h on submission
+#include "arpa/inet.h"
+#include "net/ethernet.h"
+#include "netinet/if_ether.h"
+#include "netinet/ip.h"
+#include "netinet/tcp.h"
 
 struct ethernet_info_t get_eth_info(const unsigned char *packet) {
-  // struct ethernet_t *eth_head = (struct ethernet_t *)packet;
+  struct ethernet_t *eth_head = (struct ethernet_t *)packet;
   struct ethernet_info_t ret_info;
 
-  char input_name[] = "HELLO";
-  strncpy(ret_info.type, input_name, strlen(input_name));
-  // strncpy(ret_info.type, input_name, sizeof(ret_info.type) - 1);
-  // ret_info.type[sizeof(ret_info.type) - 1] = '\0';
+  struct ether_addr mac;
 
-  char *mac_addr = "11:22:33:44:55:66";
-  strncpy(ret_info.dest_addr_s, mac_addr, strlen(mac_addr));
-  strncpy(ret_info.src_addr_s, mac_addr, strlen(mac_addr));
+  printf("\tEthernet Header\n");
+  memcpy(&mac, &eth_head->dest_addr, sizeof(eth_head->dest_addr));
+  // sprintf(ret_info.dest_addr_s, "%s", ether_ntoa(&mac));
+  printf("\t\tDest MAC: %s\n", ether_ntoa(&mac));
 
-  struct ethernet_t *eth_head = (struct ethernet_t *)packet;
+  memcpy(&mac, &eth_head->src_addr, sizeof(eth_head->src_addr));
+  // sprintf(ret_info.src_addr_s, "%s", ether_ntoa(&mac));
+  printf("\t\tSource MAC: %s\n", ether_ntoa(&mac));
 
-  int len = 6;
-
-  printf("INFO: destination addr: ");
-  while (len--) {
-    printf("%x:", (eth_head->dest_addr[5 - len]));
+  switch (ntohs(eth_head->type)) {
+  case 0x0800:
+    sprintf(ret_info.type, "IP");
+    printf("\t\tType: IP\n");
+    printf("\n");
+    get_ip_info(packet + sizeof(struct ethernet_t));
+    break;
+  case 0x0806:
+    sprintf(ret_info.type, "ARP");
+    printf("\t\tType: ARP\n");
+    printf("\n");
+    get_arp_info(packet + sizeof(struct ethernet_t));
+    break;
+  default:
+    sprintf(ret_info.type, "NONE");
+    printf("\t\tType: Unknown\n");
+    break;
   }
-  printf("\b \n");
 
-  len = 6;
-  printf("INFO: source addr: ");
-  while (len--) {
-    printf("%x:", (eth_head->src_addr[5 - len]));
-  }
-  printf("\b \n");
-
-  printf("INFO: Type: %X\n", (eth_head->type));
-
-  if(eth_head->type == 0x8){
-      printf("INFO: IP\n");
-
-  }
 
   return ret_info;
 }

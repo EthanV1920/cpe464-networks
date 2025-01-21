@@ -5,33 +5,37 @@
  * Description: This is the main file for the trace file.
  */
 
-// Includes 
-#include <stdio.h>
+// Includes
 #include "../inc/checksum.h"
-#include "../inc/net_structs.h"
 #include "../inc/ethernet_parse.h"
+#include "../inc/net_structs.h"
 #include "pcap.h"
+#include <stdio.h>
 
 // Define
 #define debug 1
 #define db(msg) debug ? printf("INFO: %s\n", msg) : printf("")
 
-int main(void) {
+int main(int argc, char *argv[]) {
   char errbuf[PCAP_ERRBUF_SIZE];
-  struct pcap_pkthdr header;
+  struct pcap_pkthdr *header;
+  const unsigned char *data;
 
   // Path is relitive to the root since that is where we run from
-  pcap_t *handle = pcap_open_offline("test_files/PingTest.pcap", errbuf);
-  db(errbuf);
+  pcap_t *handle = pcap_open_offline(argv[1], errbuf);
+  // db(errbuf);
 
-  const u_char *packet = pcap_next(handle, &header);
+  int stat;
 
   struct ethernet_info_t eth_info;
-  db("succeeded");
-  eth_info = get_eth_info(packet);
-  printf("INFO: ret_info: %s\n", eth_info.type);
-  printf("INFO: ret_info: %s\n", eth_info.dest_addr_s);
-  printf("INFO: ret_info: %s\n", eth_info.src_addr_s);
+  int i = 1;
+  printf("\n");
 
-  return 0;
+  while ((stat = pcap_next_ex(handle, &header, &data)) >= 0) {
+    printf("Packet number: %d  Packet Len: %d\n", i++, header->len);
+    printf("\n");
+    eth_info = get_eth_info(data);
+    printf("\n");
+    }
 }
+
