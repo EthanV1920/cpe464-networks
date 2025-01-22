@@ -26,3 +26,4 @@ debug: $(OBJS)
 
 clean:
 	rm -f trace
+	rm src/*.o
