@@ -84,10 +84,10 @@ void get_ip_info(const unsigned char *packet) {
 
     ps_head.src_addr = ip_head->src_addr;
     ps_head.dest_addr = ip_head->dest_addr;
-    ps_head.zeros = 0x00000000;
+    ps_head.zeros = 0x00;
     ps_head.proto = ip_head->proto;
     ps_head.tcp_len = ntohs(ip_head->total_len) - (ip_head->ihl * 4);
-    printf("%d   %d\n", ntohs(ip_head->total_len), ip_head->ihl);
+    printf("%d   %d\n", (ps_head.tcp_len), ip_head->ihl);
 
     get_tcp_info(packet + (ip_head->ihl * 4), ps_head);
     break; 

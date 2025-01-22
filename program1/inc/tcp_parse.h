@@ -36,6 +36,13 @@ struct tcp_ps_head {
   uint8_t proto;
   uint16_t tcp_len;
 } __attribute__((packed));
+// struct tcp_ps_head {
+//   uint16_t tcp_len;
+//   uint8_t proto;
+//   uint8_t zeros;
+//   uint32_t dest_addr;
+//   uint32_t src_addr;
+// } __attribute__((packed));
 
 
 void get_tcp_info(const unsigned char *packet, struct tcp_ps_head ip_check);

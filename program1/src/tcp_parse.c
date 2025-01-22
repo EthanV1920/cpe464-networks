@@ -49,19 +49,50 @@ void get_tcp_info(const unsigned char *packet, struct tcp_ps_head ps_head) {
 
   printf("\t\tWindow Size: %ld\n", ntohs(tcp_head->window));
 
-  int buf_size = sizeof(struct tcp_ps_head) + (ps_head.tcp_len) * 4;
-  printf("INFO: ps_head.len = %x\n",ps_head.tcp_len);
+  int buf_size = 12 + (ps_head.tcp_len);
+  // ps_head.tcp_len = ntohs(ps_head.tcp_len);
+  // ps_head.tcp_len = 48;
 
-  // ps_head.tcp_len = htons(ps_head.tcp_len);
+  printf("INFO: buf_size = %d\n", buf_size);
 
-  unsigned short *buf = malloc(buf_size);
-  memcpy(buf, &ps_head, sizeof(struct tcp_ps_head));
-  memcpy(buf + 12, packet, ps_head.tcp_len * 4);
+  unsigned char *ps_head_buffer = (unsigned char *)malloc(12);
 
-  printf("\t\tChecksum: 0x%x\n", in_cksum(buf, buf_size));
+  memcpy(ps_head_buffer, &ps_head.src_addr, 4);
+  memcpy(ps_head_buffer + 4, &ps_head.dest_addr, 4);
+  memcpy(ps_head_buffer + 8, &ps_head.zeros, 1);
+  memcpy(ps_head_buffer + 9, &ps_head.proto, 1);
+  memcpy(ps_head_buffer + 10, &ps_head.tcp_len, 2);
+  // TODO: Fix TCP Checksum
+  //
+  // printf("INFO: ps_head_buffer: ");
+  // for(int i = 0; i < 12; i++) {
+  //   printf("0x%02x ", ps_head_buffer[i]);
+  // }
+  // printf("\n");
+
+  // printf("INFO: packet: ");
+  // for(int i = 0; i < 36; i++) {
+  //   printf("0x%02x ", packet[i]);
+  // }
+  // printf("\n");
+
+
+
+  unsigned char *buf = malloc(buf_size);
+  memcpy(buf, ps_head_buffer, 12);
+  memcpy(buf + 12, packet, buf_size - 12);
+
+  printf("\t\tChecksum: 0x%x\n", in_cksum((uint16_t *)buf, buf_size));
+  // printf("\t\tPH: 0x%lx\n", &ps_head_buffer);
+
+  printf("INFO: buf: ");
+  for(int i = 0; i < buf_size; i++) {
+    printf("0x%02x ", buf[i]);
+  }
+  printf("\n");
 
   int check;
-  check = in_cksum(buf, buf_size);
+  check = in_cksum((uint16_t *)buf, buf_size);
   if (check == 0) {
     printf("\t\tChecksum: Correct (0x%0.4x)\n", ntohs(tcp_head->checksum));
   } else {

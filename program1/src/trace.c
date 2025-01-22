@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
     printf("Packet number: %d  Packet Len: %d\n", i++, header->len);
     printf("\n");
     eth_info = get_eth_info(data);
+    // TODO: Need to remove the last newline on the final iteration
     printf("\n");
     }
 }

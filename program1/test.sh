@@ -17,12 +17,12 @@ make
 # ./trace test_files/largeMix.pcap > tmp.txt
 # diff --ignore-all-space -b tmp.txt test_files/largeMix.out
 #
-./trace test_files/largeMix2.pcap > tmp.txt
-diff --ignore-all-space -b tmp.txt test_files/largeMix2.out
+# ./trace test_files/largeMix2.pcap > tmp.txt
+# diff --ignore-all-space -b tmp.txt test_files/largeMix2.out
 
 # ./trace test_files/mix_withIPoptions.pcap > tmp.txt
 # diff --ignore-all-space -b tmp.txt test_files/mix_withIPoptions.out
 
-# ./trace test_files/smallTCP.pcap > tmp.txt
-# diff --ignore-all-space -b tmp.txt test_files/smallTCP.out
+./trace test_files/smallTCP.pcap > tmp.txt
+diff --ignore-all-space -b tmp.txt test_files/smallTCP.out
 
