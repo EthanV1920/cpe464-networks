@@ -17,24 +17,20 @@
 #define db(msg) debug ? printf("INFO: %s\n", msg) : printf("")
 
 int main(int argc, char *argv[]) {
-  char errbuf[PCAP_ERRBUF_SIZE];
-  struct pcap_pkthdr *header;
-  const unsigned char *data;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    struct pcap_pkthdr *header;
+    const unsigned char *data;
 
-  // Path is relitive to the root since that is where we run from
-  pcap_t *handle = pcap_open_offline(argv[1], errbuf);
-  // db(errbuf);
+    pcap_t *handle = pcap_open_offline(argv[1], errbuf);
 
-  int stat;
+    int stat;
 
-  int i = 1;
+    int i = 1;
 
-  while ((stat = pcap_next_ex(handle, &header, &data)) >= 0) {
-      printf("\n");
-    printf("Packet number: %d  Packet Len: %d\n", i++, header->len);
-    printf("\n");
-    get_eth_info(data);
-    // TODO: Need to remove the last newline on the final iteration
+    while ((stat = pcap_next_ex(handle, &header, &data)) >= 0) {
+        printf("\n");
+        printf("Packet number: %d  Packet Len: %d\n", i++, header->len);
+        printf("\n");
+        get_eth_info(data);
     }
 }
-
