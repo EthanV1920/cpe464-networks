@@ -27,16 +27,14 @@ int main(int argc, char *argv[]) {
 
   int stat;
 
-  struct ethernet_info_t eth_info;
   int i = 1;
-  printf("\n");
 
   while ((stat = pcap_next_ex(handle, &header, &data)) >= 0) {
+      printf("\n");
     printf("Packet number: %d  Packet Len: %d\n", i++, header->len);
     printf("\n");
-    eth_info = get_eth_info(data);
+    get_eth_info(data);
     // TODO: Need to remove the last newline on the final iteration
-    printf("\n");
     }
 }
 

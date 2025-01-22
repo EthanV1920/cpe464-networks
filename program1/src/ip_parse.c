@@ -15,6 +15,7 @@
 #include "net/ethernet.h"
 #include "stdio.h"
 #include <stdint.h>
+#include <string.h>
 
 void get_ip_info(const unsigned char *packet) {
   struct ip_t *ip_head = (struct ip_t *)packet;
@@ -80,14 +81,14 @@ void get_ip_info(const unsigned char *packet) {
     // printf("\t\tProtocol: TCP\n");
     printf("\n");
 
-    struct tcp_ps_head ps_head;
-
-    ps_head.src_addr = ip_head->src_addr;
-    ps_head.dest_addr = ip_head->dest_addr;
-    ps_head.zeros = 0x00;
-    ps_head.proto = ip_head->proto;
-    ps_head.tcp_len = ntohs(ip_head->total_len) - (ip_head->ihl * 4);
-    printf("%d   %d\n", (ps_head.tcp_len), ip_head->ihl);
+    struct tcp_ps_head ps_head = { 0 };
+    uint16_t net_len = htons(ntohs(ip_head->total_len) - (ip_head->ihl * 4));
+    memcpy(&ps_head.src_addr, &ip_head->src_addr, sizeof(ip_head->src_addr));
+    memcpy(&ps_head.dest_addr, &ip_head->dest_addr, sizeof(ip_head->dest_addr));
+    // memset(&ps_head.zeros, 0x00, sizeof(0x00));
+    memcpy(&ps_head.proto, &ip_head->proto, sizeof(ip_head->proto));
+    memcpy(&ps_head.tcp_len, &net_len , sizeof(ip_head->total_len));
+    // printf("%d   %d\n", (ps_head.tcp_len), ip_head->ihl);
 
     get_tcp_info(packet + (ip_head->ihl * 4), ps_head);
     break; 

@@ -18,7 +18,6 @@ Packet number: 1  Packet Len: 62
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-48   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -30,9 +29,7 @@ Packet number: 1  Packet Len: 62
 		FIN Flag: No
 		ACK Flag: No
 		Window Size: 16384
-INFO: ps_head.len = ec2f
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x5aba)
+		Checksum: Correct (0x5aba)
 
 Packet number: 2  Packet Len: 62
 
@@ -53,7 +50,6 @@ Packet number: 2  Packet Len: 62
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-48   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -65,9 +61,7 @@ Packet number: 2  Packet Len: 62
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = ec2f
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x717a)
+		Checksum: Correct (0x717a)
 
 Packet number: 3  Packet Len: 54
 
@@ -88,7 +82,6 @@ Packet number: 3  Packet Len: 54
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-40   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -100,9 +93,7 @@ Packet number: 3  Packet Len: 54
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16560
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x1f4f)
+		Checksum: Correct (0x1f4f)
 
 Packet number: 4  Packet Len: 74
 
@@ -123,7 +114,6 @@ Packet number: 4  Packet Len: 74
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-60   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -135,9 +125,7 @@ Packet number: 4  Packet Len: 74
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = ec3b
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0xe036)
+		Checksum: Correct (0xe036)
 
 Packet number: 5  Packet Len: 54
 
@@ -158,7 +146,6 @@ Packet number: 5  Packet Len: 54
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-40   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -170,9 +157,7 @@ Packet number: 5  Packet Len: 54
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16540
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x1f4f)
+		Checksum: Correct (0x1f4f)
 
 Packet number: 6  Packet Len: 78
 
@@ -193,7 +178,6 @@ Packet number: 6  Packet Len: 78
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-64   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -205,9 +189,7 @@ Packet number: 6  Packet Len: 78
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16540
-INFO: ps_head.len = ec3f
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x0aeb)
+		Checksum: Correct (0x0aeb)
 
 Packet number: 7  Packet Len: 60
 
@@ -228,7 +210,6 @@ Packet number: 7  Packet Len: 60
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-40   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -240,9 +221,7 @@ Packet number: 7  Packet Len: 60
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x9dc2)
+		Checksum: Correct (0x9dc2)
 
 Packet number: 8  Packet Len: 686
 
@@ -263,7 +242,6 @@ Packet number: 8  Packet Len: 686
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-672   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -275,9 +253,7 @@ Packet number: 8  Packet Len: 686
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16540
-INFO: ps_head.len = ee9f
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0xf01c)
+		Checksum: Correct (0xf01c)
 
 Packet number: 9  Packet Len: 60
 
@@ -298,7 +274,6 @@ Packet number: 9  Packet Len: 60
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-40   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -310,9 +285,7 @@ Packet number: 9  Packet Len: 60
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x9b4a)
+		Checksum: Correct (0x9b4a)
 
 Packet number: 10  Packet Len: 438
 
@@ -333,7 +306,6 @@ Packet number: 10  Packet Len: 438
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-424   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -345,9 +317,7 @@ Packet number: 10  Packet Len: 438
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = eda7
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x43ed)
+		Checksum: Correct (0x43ed)
 
 Packet number: 11  Packet Len: 78
 
@@ -368,7 +338,6 @@ Packet number: 11  Packet Len: 78
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-64   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -380,9 +349,7 @@ Packet number: 11  Packet Len: 78
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16156
-INFO: ps_head.len = ec3f
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0xea68)
+		Checksum: Correct (0xea68)
 
 Packet number: 12  Packet Len: 478
 
@@ -403,7 +370,6 @@ Packet number: 12  Packet Len: 478
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-464   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -415,9 +381,7 @@ Packet number: 12  Packet Len: 478
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = edcf
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x84bd)
+		Checksum: Correct (0x84bd)
 
 Packet number: 13  Packet Len: 54
 
@@ -438,7 +402,6 @@ Packet number: 13  Packet Len: 54
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-40   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -450,9 +413,7 @@ Packet number: 13  Packet Len: 54
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 15732
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x1ca7)
+		Checksum: Correct (0x1ca7)
 
 Packet number: 14  Packet Len: 470
 
@@ -473,7 +434,6 @@ Packet number: 14  Packet Len: 470
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-456   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -485,9 +445,7 @@ Packet number: 14  Packet Len: 470
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 15732
-INFO: ps_head.len = edc7
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x4d42)
+		Checksum: Correct (0x4d42)
 
 Packet number: 15  Packet Len: 60
 
@@ -508,7 +466,6 @@ Packet number: 15  Packet Len: 60
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-40   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -520,9 +477,7 @@ Packet number: 15  Packet Len: 60
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x966a)
+		Checksum: Correct (0x966a)
 
 Packet number: 16  Packet Len: 790
 
@@ -543,7 +498,6 @@ Packet number: 16  Packet Len: 790
 		Sender IP: 129.65.242.4
 		Dest IP: 192.168.1.102
 
-776   5
 	TCP Header
 		Source Port:  22
 		Dest Port:  1675
@@ -555,9 +509,7 @@ Packet number: 16  Packet Len: 790
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 49680
-INFO: ps_head.len = ef07
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0xb406)
+		Checksum: Correct (0xb406)
 
 Packet number: 17  Packet Len: 54
 
@@ -578,7 +530,6 @@ Packet number: 17  Packet Len: 54
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-40   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -590,9 +541,7 @@ Packet number: 17  Packet Len: 54
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16560
-INFO: ps_head.len = ec27
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x14eb)
+		Checksum: Correct (0x14eb)
 
 Packet number: 18  Packet Len: 70
 
@@ -613,7 +562,6 @@ Packet number: 18  Packet Len: 70
 		Sender IP: 192.168.1.102
 		Dest IP: 129.65.242.4
 
-56   5
 	TCP Header
 		Source Port:  1675
 		Dest Port:  22
@@ -625,7 +573,4 @@ Packet number: 18  Packet Len: 70
 		FIN Flag: No
 		ACK Flag: Yes
 		Window Size: 16560
-INFO: ps_head.len = ec37
-		Checksum: 0x6dd1ac28
-		Checksum: Incorrect (0x0ab2)
-
+		Checksum: Correct (0x0ab2)

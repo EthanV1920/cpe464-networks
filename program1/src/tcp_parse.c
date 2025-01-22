@@ -18,8 +18,55 @@ void get_tcp_info(const unsigned char *packet, struct tcp_ps_head ps_head) {
   struct tcp_t *tcp_head = (struct tcp_t *)packet;
 
   printf("\tTCP Header\n");
-  printf("\t\tSource Port:  %d\n", ntohs(tcp_head->src_port));
-  printf("\t\tDest Port:  %d\n", ntohs(tcp_head->dest_port));
+
+  switch (ntohs(tcp_head->src_port)) {
+  case 53:
+    printf("\t\tSource Port:  DNS\n");
+    break;
+  case 23:
+    printf("\t\tSource Port:  Telnet\n");
+    break;
+  case 80:
+    printf("\t\tSource Port:  HTTP\n");
+    break;
+  case 20:
+    printf("\t\tSource Port:  FTP\n");
+    break;
+  case 110:
+    printf("\t\tSource Port:  POP3\n");
+    break;
+  case 25:
+    printf("\t\tSource Port:  SMTP\n");
+    break;
+  default:
+    printf("\t\tSource Port:  %d\n", ntohs(tcp_head->src_port));
+    break;
+  }
+
+  switch (ntohs(tcp_head->dest_port)) {
+  case 53:
+    printf("\t\tDest Port:  DNS\n");
+    break;
+  case 23:
+    printf("\t\tDest Port:  Telnet\n");
+    break;
+  case 80:
+    printf("\t\tDest Port:  HTTP\n");
+    break;
+  case 20:
+    printf("\t\tDest Port:  FTP\n");
+    break;
+  case 110:
+    printf("\t\tDest Port:  POP3\n");
+    break;
+  case 25:
+    printf("\t\tDest Port:  SMTP\n");
+    break;
+  default:
+    printf("\t\tDest Port:  %d\n", ntohs(tcp_head->dest_port));
+    break;
+  }
+
   printf("\t\tSequence Number: %ld\n", ntohl(tcp_head->seq_num));
   printf("\t\tACK Number: %ld\n", ntohl(tcp_head->ack));
   printf("\t\tData Offset (bytes): %d\n", (tcp_head->data_ofst) * 4);
@@ -49,19 +96,20 @@ void get_tcp_info(const unsigned char *packet, struct tcp_ps_head ps_head) {
 
   printf("\t\tWindow Size: %ld\n", ntohs(tcp_head->window));
 
-  int buf_size = 12 + (ps_head.tcp_len);
+  int buf_size = 12 + ntohs(ps_head.tcp_len);
   // ps_head.tcp_len = ntohs(ps_head.tcp_len);
   // ps_head.tcp_len = 48;
 
-  printf("INFO: buf_size = %d\n", buf_size);
+  // printf("INFO: buf_size = %d\n", buf_size);
 
-  unsigned char *ps_head_buffer = (unsigned char *)malloc(12);
+  // unsigned char *ps_head_buffer = (unsigned char *)malloc(12);
+  // ps_head_buffer = {0};
 
-  memcpy(ps_head_buffer, &ps_head.src_addr, 4);
-  memcpy(ps_head_buffer + 4, &ps_head.dest_addr, 4);
-  memcpy(ps_head_buffer + 8, &ps_head.zeros, 1);
-  memcpy(ps_head_buffer + 9, &ps_head.proto, 1);
-  memcpy(ps_head_buffer + 10, &ps_head.tcp_len, 2);
+  // memcpy(ps_head_buffer, &ps_head.src_addr, 4);
+  // memcpy(ps_head_buffer + 4, &ps_head.dest_addr, 4);
+  // memcpy(ps_head_buffer + 8, &ps_head.zeros, 1);
+  // memcpy(ps_head_buffer + 9, &ps_head.proto, 1);
+  // memcpy(ps_head_buffer + 10, &ps_head.tcp_len, 2);
   // TODO: Fix TCP Checksum
   //
   // printf("INFO: ps_head_buffer: ");
@@ -76,20 +124,18 @@ void get_tcp_info(const unsigned char *packet, struct tcp_ps_head ps_head) {
   // }
   // printf("\n");
 
-
-
   unsigned char *buf = malloc(buf_size);
-  memcpy(buf, ps_head_buffer, 12);
+  memcpy(buf, &ps_head, 12);
   memcpy(buf + 12, packet, buf_size - 12);
 
-  printf("\t\tChecksum: 0x%x\n", in_cksum((uint16_t *)buf, buf_size));
+  // printf("\t\tChecksum: 0x%x\n", in_cksum((uint16_t *)buf, buf_size));
   // printf("\t\tPH: 0x%lx\n", &ps_head_buffer);
 
-  printf("INFO: buf: ");
-  for(int i = 0; i < buf_size; i++) {
-    printf("0x%02x ", buf[i]);
-  }
-  printf("\n");
+  // printf("INFO: buf: ");
+  // for (int i = 0; i < buf_size; i++) {
+  //   printf("%02x ", buf[i]);
+  // }
+  // printf("\n");
 
   int check;
   check = in_cksum((uint16_t *)buf, buf_size);
