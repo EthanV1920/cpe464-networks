@@ -33,6 +33,15 @@ void test01() {
   printf("INFO: Tracked count: %d Struct count: %d\n", entry_count, tmp_handle_table->entry_count);
   printf("INFO: New table size %d\n", tmp_handle_table->table_size);
   assert(tmp_handle_table->entry_count == entry_count);
+  
+  char str4[] = "testHandle4";
+  uint16_t socket_number4 = 14446;
+  assert(add_entry(socket_number4, str4, tmp_handle_table) == 0);
+  entry_count++;
+  assert(get_socket(tmp_handle_table, str4) == socket_number4);
+  printf("INFO: Tracked count: %d Struct count: %d\n", entry_count, tmp_handle_table->entry_count);
+  printf("INFO: New table size %d\n", tmp_handle_table->table_size);
+  assert(tmp_handle_table->entry_count == entry_count);
 }
 
 int main() {
