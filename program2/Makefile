@@ -24,6 +24,7 @@ cleano:
 clean:
 	rm -f myServer myClient *.o
 
-
-
+test: test.o handle.o
+	$(CC) $(CFLAGS) -o test test.c handle.c
+	./test
 
