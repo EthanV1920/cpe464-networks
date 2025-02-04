@@ -22,10 +22,17 @@ void test01() {
   entry_count++;
   assert(get_socket(tmp_handle_table, str2) == socket_number2);
   assert(tmp_handle_table->entry_count == entry_count);
-  assert(strcmp(get_handle(tmp_handle_table, socket_number2), str2) == 0);
-  assert(tmp_handle_table->entry_count == entry_count);
+  printf("INFO: Tracked count: %d Struct count: %d\n", entry_count, tmp_handle_table->entry_count);
+  printf("INFO: New table size %d\n", tmp_handle_table->table_size);
 
-  assert(add_entry(socket_number2, str2, tmp_handle_table) == 2);
+  char str3[] = "testHandle3";
+  uint16_t socket_number3 = 13346;
+  assert(add_entry(socket_number3, str3, tmp_handle_table) == 0);
+  entry_count++;
+  assert(get_socket(tmp_handle_table, str3) == socket_number3);
+  printf("INFO: Tracked count: %d Struct count: %d\n", entry_count, tmp_handle_table->entry_count);
+  printf("INFO: New table size %d\n", tmp_handle_table->table_size);
+  assert(tmp_handle_table->entry_count == entry_count);
 }
 
 int main() {

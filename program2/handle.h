@@ -10,15 +10,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct handle_table_entry {
+typedef struct handle_table_entry {
   uint16_t socket_number;
   char handle_name[100];
-};
+}HandleEntries;
 
 struct handle_table {
-  struct handle_table_entry *handle_table_entries[2];
-  uint16_t entry_count;
-  uint16_t table_size;
+  struct handle_table_entry *handle_table_entries;
+  uint16_t entry_count; // number of entries in the table
+  uint16_t table_size;  // Size of the table
 };
 
 struct handle_table *create_table();

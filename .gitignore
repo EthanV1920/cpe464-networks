@@ -1,2 +1,8 @@
 *.o
 .DS_Store
+
+program2/test.dSYM/Contents/Resources/Relocations/aarch64/
+
+program2/test.dSYM/Contents/Resources/DWARF/
+
+program2/.vscode/
