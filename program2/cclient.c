@@ -23,6 +23,7 @@
 #include "networks.h"
 #include "pollLib.h"
 #include "safeUtil.h"
+#include <ctype.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -48,6 +49,13 @@ int readFromStdin(uint8_t *buffer);
 void processMsgFromServer(int serverSocket);
 void printBcast(uint8_t *buf);
 void setHandle(char handle[100], int socket);
+void multicast(uint8_t *buf, int socket);
+void printBuf(uint8_t *buf, uint16_t len);
+void messageParse(uint16_t bufferLength, uint8_t *inputBuffer);
+void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer);
+void listParse(uint16_t bufferLength, uint8_t *inputBuffer);
+void broadcastParse(uint16_t bufferLength, uint8_t *inputBuffer);
+
 
 int main(int argc, char *argv[]) {
   int clientSocket = 0; // Socket descriptor
@@ -104,8 +112,36 @@ void processStdin(int clientSocket) {
   int bufferLength = 0;
 
   bufferLength = readFromStdin(inputBuffer); // Read from Stdin
-  printf("Reading: %s\nString length: %d (including null)\n", inputBuffer,
-         bufferLength);
+
+  if (inputBuffer[0] != '%') {
+    printf("WARN: Incorrect Command\n");
+    return;
+  }
+  switch (tolower(inputBuffer[1])) {
+
+  case 'm':
+    messageParse(bufferLength, inputBuffer);
+    printf("INFO: m\n");
+    break;
+  case 'c':
+    multicastParse(bufferLength, inputBuffer);
+    printf("INFO: c\n");
+    break;
+  case 'l':
+    listParse(bufferLength, inputBuffer);
+    printf("INFO: l\n");
+    break;
+  case 'b':
+    broadcastParse(bufferLength, inputBuffer);
+    printf("INFO: b\n");
+    break;
+  default:
+    printf("WARN: Incorrect Command\n");
+    break;
+  }
+
+  // printf("Reading: %s\nString length: %d (including null)\n", inputBuffer,
+  //        bufferLength);
 
   bytesSent = sendPDU(clientSocket, inputBuffer,
                       bufferLength); // Send message to server
@@ -164,18 +200,27 @@ void processMsgFromServer(int clientSocket) {
     printBcast(buf);
     return;
   case 5:
+    // printBuf(buf, len);
+    multicast(buf, clientSocket);
     return;
   case 6:
+    // printBuf(buf, len);
+    multicast(buf, clientSocket);
     return;
   case 7:
+    printf("ERROR: User not found\n");
     return;
   case 10:
+    printBuf(buf, len);
     return;
   case 11:
+    printBuf(buf, len);
     return;
   case 12:
+    printBuf(buf, len);
     return;
   case 13:
+    printBuf(buf, len);
     return;
   default:
     return;
@@ -197,7 +242,58 @@ void setHandle(char handle[100], int socket) {
   handleBuf[0] = 1;
   handleBuf[1] = 1 + strlen(handle);
 
-  memcpy(handleBuf+2, handle, strlen(handle));
-  
+  memcpy(handleBuf + 2, handle, strlen(handle));
+
   sendPDU(socket, handleBuf, handleBufLen);
+}
+
+void multicast(uint8_t *buf, int socket) {
+  uint8_t handleBuf[MAXBUF];
+  uint8_t handleBufLen;
+  uint8_t readerLocation = 0;
+  char senderHandle[100];
+  char senderMessage[200];
+
+  // Get the sender handle
+  memcpy(senderHandle, buf + 4, (uint8_t)buf[3]);
+  senderHandle[buf[3] + 1] = '\0';
+
+  uint8_t handleListStart = 4 + buf[3];
+  readerLocation = handleListStart + 1;
+  for (int i = 0; i < buf[handleListStart]; i++) {
+    readerLocation += buf[readerLocation] + 1;
+    printf("INFO: ReaderLocation = %d\n", readerLocation);
+  }
+
+  memcpy(senderMessage, buf + readerLocation, sizeof(senderMessage));
+
+  printf("%s: %s\n", senderHandle, senderMessage);
+}
+
+void printBuf(uint8_t *buf, uint16_t len) {
+  printf("%d: 00 00", len);
+  for (int i = 2; i < len; i++) {
+    if (buf[i] >= 32 && buf[i] <= 127) {
+      printf("%c", (char)buf[i]);
+    } else {
+      printf(" %hhu ", buf[i]);
+    }
+  }
+  printf("\n");
+}
+
+void messageParse(uint16_t bufferLength, uint8_t *inputBuffer){
+
+}
+
+void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer){
+
+}
+
+void listParse(uint16_t bufferLength, uint8_t *inputBuffer){
+
+}
+
+void broadcastParse(uint16_t bufferLength, uint8_t *inputBuffer){
+
 }
