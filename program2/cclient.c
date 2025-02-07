@@ -54,9 +54,8 @@ void multicast(uint8_t *buf, int socket);
 void printBuf(uint8_t *buf, uint16_t len);
 void messageSend(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer,
                  uint8_t mode);
-void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer);
 void getList(int clientSocket);
-void sendBroadcast(uint16_t bufferLength, uint8_t *inputBuffer);
+void sendBroadcast(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer);
 void printHandleNumber(uint8_t *buf);
 
 char myHandle[100];
@@ -137,7 +136,7 @@ void processStdin(int clientSocket) {
     getList(clientSocket);
     break;
   case 'b':
-    sendBroadcast(bufferLength, inputBuffer);
+    sendBroadcast(clientSocket, bufferLength, inputBuffer);
     break;
   default:
     printf("WARN: Incorrect Command\n");
@@ -345,15 +344,38 @@ void messageSend(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer,
   sendPDU(clientSocket, buf, bufPointer);
 }
 
-void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer) {}
-
 void getList(int clientSocket) {
   uint8_t handleList[1];
   handleList[0] = 0xA;
   sendPDU(clientSocket, handleList, 1);
 }
 
-void sendBroadcast(uint16_t bufferLength, uint8_t *inputBuffer) {}
+void sendBroadcast(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer) {
+
+  int bufPointer = 2;
+  int handleLenCount = 0;
+  uint8_t buf[200];
+  int inputPointer = 3;
+  buf[0] = 4;
+  buf[1] = myHandleLen;
+  memcpy(buf + bufPointer, myHandle, myHandleLen);
+  bufPointer += myHandleLen;
+  int headerEnd = bufPointer;
+
+  while (inputPointer < bufferLength) {
+    memcpy(buf + bufPointer++, inputBuffer + inputPointer++, 1);
+    if (bufPointer >= 199) {
+      sendPDU(clientSocket, buf, bufPointer);
+      bufPointer = headerEnd;
+      while (bufPointer++ < 199) {
+        buf[bufPointer] = '\0';
+      }
+      bufPointer = headerEnd;
+    }
+  }
+  printBuf(buf, bufPointer);
+  sendPDU(clientSocket, buf, bufPointer);
+}
 
 void printHandleNumber(uint8_t *buf) {
   uint32_t handleNum = 0;
