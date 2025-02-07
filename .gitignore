@@ -6,3 +6,7 @@ program2/test.dSYM/Contents/Resources/Relocations/aarch64/
 program2/test.dSYM/Contents/Resources/DWARF/
 
 program2/.vscode/
+
+program2/server.dSYM/
+
+program2/cclient.dSYM/

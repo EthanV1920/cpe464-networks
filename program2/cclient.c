@@ -49,13 +49,18 @@ int readFromStdin(uint8_t *buffer);
 void processMsgFromServer(int serverSocket);
 void printBcast(uint8_t *buf);
 void setHandle(char handle[100], int socket);
+void printHandle(uint8_t *buf);
 void multicast(uint8_t *buf, int socket);
 void printBuf(uint8_t *buf, uint16_t len);
-void messageParse(uint16_t bufferLength, uint8_t *inputBuffer);
+void messageSend(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer,
+                 uint8_t mode);
 void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer);
-void listParse(uint16_t bufferLength, uint8_t *inputBuffer);
-void broadcastParse(uint16_t bufferLength, uint8_t *inputBuffer);
+void getList(int clientSocket);
+void sendBroadcast(uint16_t bufferLength, uint8_t *inputBuffer);
+void printHandleNumber(uint8_t *buf);
 
+char myHandle[100];
+uint8_t myHandleLen;
 
 int main(int argc, char *argv[]) {
   int clientSocket = 0; // Socket descriptor
@@ -64,8 +69,8 @@ int main(int argc, char *argv[]) {
 
   /// Set up the TCP Client socket ///
   clientSocket = tcpClientSetup(argv[2], argv[3], DEBUG_FLAG);
-  char myHandle[100];
-  memcpy(myHandle, argv[1], strlen(argv[1]));
+  myHandleLen = strlen(argv[1]);
+  memcpy(myHandle, argv[1], myHandleLen);
 
   setHandle(myHandle, clientSocket);
 
@@ -95,6 +100,9 @@ void checkArgs(int argc, char *argv[]) {
 void clientControl(int clientSocket) {
   int pollResult;
 
+  printf("$: ");
+  fflush(stdout);
+
   pollResult = pollCall(-1);
 
   if (pollResult == STDIN_FILENO) { // Available message in stdin
@@ -114,26 +122,22 @@ void processStdin(int clientSocket) {
   bufferLength = readFromStdin(inputBuffer); // Read from Stdin
 
   if (inputBuffer[0] != '%') {
-    printf("WARN: Incorrect Command\n");
+    printf("WARN: Command Must Start with \%%\n");
     return;
   }
   switch (tolower(inputBuffer[1])) {
 
   case 'm':
-    messageParse(bufferLength, inputBuffer);
-    printf("INFO: m\n");
+    messageSend(clientSocket, bufferLength, inputBuffer, 1);
     break;
   case 'c':
-    multicastParse(bufferLength, inputBuffer);
-    printf("INFO: c\n");
+    messageSend(clientSocket, bufferLength, inputBuffer, 2);
     break;
   case 'l':
-    listParse(bufferLength, inputBuffer);
-    printf("INFO: l\n");
+    getList(clientSocket);
     break;
   case 'b':
-    broadcastParse(bufferLength, inputBuffer);
-    printf("INFO: b\n");
+    sendBroadcast(bufferLength, inputBuffer);
     break;
   default:
     printf("WARN: Incorrect Command\n");
@@ -150,7 +154,7 @@ void processStdin(int clientSocket) {
     perror("send call");
     exit(-1);
   }
-  printf("Amount of data bytesSent is: %d\n\n", bytesSent);
+  // printf("Amount of data bytesSent is: %d\n\n", bytesSent);
 }
 
 /* Reads input from stdin: Ensure the input length < buffer size and null
@@ -211,16 +215,19 @@ void processMsgFromServer(int clientSocket) {
     printf("ERROR: User not found\n");
     return;
   case 10:
-    printBuf(buf, len);
+    // printBuf(buf, len);
     return;
   case 11:
-    printBuf(buf, len);
+    // printBuf(buf, len);
+    printf("\b\b\b--------START--------\n");
+    printHandleNumber(buf);
     return;
   case 12:
-    printBuf(buf, len);
+    printHandle(buf);
     return;
   case 13:
-    printBuf(buf, len);
+    // printBuf(buf, len);
+    printf("\b\b\b---------END---------\n");
     return;
   default:
     return;
@@ -272,7 +279,7 @@ void multicast(uint8_t *buf, int socket) {
 
 void printBuf(uint8_t *buf, uint16_t len) {
   printf("%d: 00 00", len);
-  for (int i = 2; i < len; i++) {
+  for (int i = 0; i < len; i++) {
     if (buf[i] >= 32 && buf[i] <= 127) {
       printf("%c", (char)buf[i]);
     } else {
@@ -282,18 +289,81 @@ void printBuf(uint8_t *buf, uint16_t len) {
   printf("\n");
 }
 
-void messageParse(uint16_t bufferLength, uint8_t *inputBuffer){
+void messageSend(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer,
+                 uint8_t mode) {
 
+  int handleNum = mode == 1 ? 1 : inputBuffer[3] - '0';
+  int bufPointer = 2;
+  int handleLenCount = 0;
+  uint8_t buf[200];
+  int inputPointer = 5;
+  buf[1] = myHandleLen;
+  memcpy(buf + bufPointer, myHandle, myHandleLen);
+  bufPointer += myHandleLen;
+  buf[bufPointer++] = handleNum;
+
+  if (mode == 1) {
+    buf[0] = 5;
+    inputPointer = 3;
+
+  } else if (mode == 2) {
+    buf[0] = 6;
+  }
+
+  for (int i = 0; i < handleNum; i++) {
+    bufPointer++;
+    printf("INFO: starting a new round %c, inputPointer: %d\n",
+           inputBuffer[inputPointer], inputPointer);
+    while (inputBuffer[inputPointer] != ' ') {
+      memcpy(buf + bufPointer++, inputBuffer + inputPointer, 1);
+
+      printf("INFO: char copied: %c\n", inputBuffer[inputPointer]);
+
+      handleLenCount++;
+      inputPointer++;
+    }
+    buf[bufPointer - handleLenCount - 1] = handleLenCount;
+    inputPointer++;
+    handleLenCount = 0;
+  }
+
+  int headerEnd = bufPointer;
+
+  while (inputPointer < bufferLength) {
+    memcpy(buf + bufPointer++, inputBuffer + inputPointer++, 1);
+    if (bufPointer >= 199) {
+      sendPDU(clientSocket, buf, bufPointer);
+      bufPointer = headerEnd;
+      while (bufPointer++ < 199) {
+        buf[bufPointer] = '\0';
+      }
+      bufPointer = headerEnd;
+    }
+  }
+  printf("%d\n", handleNum);
+  printBuf(buf, bufPointer);
+  sendPDU(clientSocket, buf, bufPointer);
 }
 
-void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer){
+void multicastParse(uint16_t bufferLength, uint8_t *inputBuffer) {}
 
+void getList(int clientSocket) {
+  uint8_t handleList[1];
+  handleList[0] = 0xA;
+  sendPDU(clientSocket, handleList, 1);
 }
 
-void listParse(uint16_t bufferLength, uint8_t *inputBuffer){
+void sendBroadcast(uint16_t bufferLength, uint8_t *inputBuffer) {}
 
+void printHandleNumber(uint8_t *buf) {
+  uint32_t handleNum = 0;
+  memcpy(&handleNum, buf + 3, 4);
+  printf("Handle List: (%d Clients online)\n", ntohl(handleNum));
 }
-
-void broadcastParse(uint16_t bufferLength, uint8_t *inputBuffer){
-
+void printHandle(uint8_t *buf) {
+  uint16_t handleLen = buf[3];
+  uint8_t tmp_handle[MAXBUF];
+  memcpy(tmp_handle, buf + 4, handleLen);
+  tmp_handle[handleLen] = '\0';
+  printf("\b\b\b%s\n", tmp_handle);
 }

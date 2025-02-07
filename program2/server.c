@@ -29,6 +29,7 @@
 #include <stdint.h>
 
 #include "PDU.h"
+#include "handle.h"
 #include "pollLib.h"
 #include "networks.h"
 #include "safeUtil.h"
