@@ -146,8 +146,8 @@ void processStdin(int clientSocket) {
   // printf("Reading: %s\nString length: %d (including null)\n", inputBuffer,
   //        bufferLength);
 
-  bytesSent = sendPDU(clientSocket, inputBuffer,
-                      bufferLength); // Send message to server
+  // bytesSent = sendPDU(clientSocket, inputBuffer,
+  //                     bufferLength); // Send message to server
 
   if (bytesSent < 0) { // ERROR DETECTION
     perror("send call");
@@ -238,7 +238,7 @@ void printBcast(uint8_t *buf) {
   uint8_t tmp_handle[MAXBUF];
   memcpy(tmp_handle, buf + 4, handleLen);
   tmp_handle[handleLen] = '\0';
-  printf("%s: %s\n", tmp_handle, buf + 4 + handleLen);
+  printf("\n%s: %s\n", tmp_handle, buf + 4 + handleLen);
 }
 
 void setHandle(char handle[100], int socket) {
@@ -268,7 +268,7 @@ void multicast(uint8_t *buf, int socket) {
   readerLocation = handleListStart + 1;
   for (int i = 0; i < buf[handleListStart]; i++) {
     readerLocation += buf[readerLocation] + 1;
-    printf("INFO: ReaderLocation = %d\n", readerLocation);
+    // printf("INFO: ReaderLocation = %d\n", readerLocation);
   }
 
   memcpy(senderMessage, buf + readerLocation, sizeof(senderMessage));
@@ -311,12 +311,12 @@ void messageSend(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer,
 
   for (int i = 0; i < handleNum; i++) {
     bufPointer++;
-    printf("INFO: starting a new round %c, inputPointer: %d\n",
-           inputBuffer[inputPointer], inputPointer);
+    // printf("INFO: starting a new round %c, inputPointer: %d\n",
+           // inputBuffer[inputPointer], inputPointer);
     while (inputBuffer[inputPointer] != ' ') {
       memcpy(buf + bufPointer++, inputBuffer + inputPointer, 1);
 
-      printf("INFO: char copied: %c\n", inputBuffer[inputPointer]);
+      // printf("INFO: char copied: %c\n", inputBuffer[inputPointer]);
 
       handleLenCount++;
       inputPointer++;
@@ -339,8 +339,8 @@ void messageSend(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer,
       bufPointer = headerEnd;
     }
   }
-  printf("%d\n", handleNum);
-  printBuf(buf, bufPointer);
+  // printf("%d\n", handleNum);
+  // printBuf(buf, bufPointer);
   sendPDU(clientSocket, buf, bufPointer);
 }
 
@@ -373,7 +373,7 @@ void sendBroadcast(int clientSocket, uint16_t bufferLength, uint8_t *inputBuffer
       bufPointer = headerEnd;
     }
   }
-  printBuf(buf, bufPointer);
+  // printBuf(buf, bufPointer);
   sendPDU(clientSocket, buf, bufPointer);
 }
 

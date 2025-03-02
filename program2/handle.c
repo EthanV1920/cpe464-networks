@@ -23,7 +23,7 @@ struct handle_table *create_table() {
   return tmp_table;
 };
 
-int add_entry(uint16_t new_socket_number, char new_handle_name[100],
+int add_entry(uint16_t new_socket_number, char *new_handle_name, int new_handle_size,
               struct handle_table *cur_handle_table) {
 
   // printf("INFO: adding entry: %s , %d\n", new_handle_name,
@@ -50,7 +50,7 @@ int add_entry(uint16_t new_socket_number, char new_handle_name[100],
 
   tmp_entry->socket_number = new_socket_number;
   // printf("INFO: Socket Number is %d\n", tmp_entry->socket_number);
-  memcpy(tmp_entry->handle_name, new_handle_name, 100);
+  memcpy(tmp_entry->handle_name, new_handle_name, new_handle_size);
   // printf("INFO: Handle Name is %s\n", tmp_entry->handle_name);
 
   cur_handle_table->handle_table_entries[cur_handle_table->entry_count] =

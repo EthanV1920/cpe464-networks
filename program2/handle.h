@@ -23,7 +23,7 @@ struct handle_table {
 
 struct handle_table *create_table();
 
-int add_entry(uint16_t socket_number, char handle_name[100],
+int add_entry(uint16_t socket_number, char *handle_name, int new_handle_size,
               struct handle_table *handle_table);
 
 uint16_t get_socket(struct handle_table *cur_handle_table,
