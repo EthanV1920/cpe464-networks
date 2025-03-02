@@ -32,6 +32,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+#include "docs/libcpe464_2_21b/libcpe464/networks/network-hooks.h"
 #include "gethostbyname.h"
 #include "networks.h"
 #include "safeUtil.h"
@@ -59,6 +60,9 @@ typedef struct {
 void talkToServer(int socketNum, struct sockaddr_in6 *server);
 int readFromStdin(char *buffer);
 setupInfo_t processArgs(int argc, char *argv[]);
+int connectString(setupInfo_t setupInfo);
+void printBuf(uint8_t *buf, uint16_t len);
+
 
 int main(int argc, char *argv[]) {
     int socketNum = 0;
@@ -70,6 +74,9 @@ int main(int argc, char *argv[]) {
     socketNum = setupUdpClientToServer(&server, argv[REMOTE_MACHINE],
                                        setupInfo.remotePort);
 
+    sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_OFF, DEBUG_ON, RSEED_ON);
+
+    connectString(setupInfo);
     talkToServer(socketNum, &server);
 
     close(socketNum);
@@ -89,8 +96,8 @@ void talkToServer(int socketNum, struct sockaddr_in6 *server) {
 
         printf("Sending: %s with len: %d\n", buffer, dataLen);
 
-        safeSendto(socketNum, buffer, dataLen, 0, (struct sockaddr *)server,
-                   serverAddrLen);
+        sendtoErr(socketNum, buffer, dataLen, 0, (struct sockaddr *)server,
+                  serverAddrLen);
 
         safeRecvfrom(socketNum, buffer, MAXBUF, 0, (struct sockaddr *)server,
                      &serverAddrLen);
@@ -159,3 +166,33 @@ setupInfo_t processArgs(int argc, char *argv[]) {
 
     return args;
 }
+
+int connectString(setupInfo_t setupInfo) {
+    printf("DEBUG: Setting up connection to server");
+    uint16_t bufferSize = 4+2+1+100+2+4;
+    uint8_t buf[bufferSize];
+    memset(buf, 0x0000, 4);
+    memset(buf + 4, 0xFF, 2);
+    memset(buf + 6, 0x8, 1);
+    memcpy(buf + 7, setupInfo.fromFileName, 100);
+    memset(buf + 107, setupInfo.bufferSize, 2);
+    memset(buf + 109, setupInfo.windowSize, 4);
+    
+    printBuf(buf, bufferSize);
+
+    return 1;
+}
+
+void printBuf(uint8_t *buf, uint16_t len) {
+  printf("%d: 00 00", len);
+  for (int i = 0; i < len; i++) {
+    if (buf[i] >= 32 && buf[i] <= 127) {
+      printf("%c", (char)buf[i]);
+    } else {
+      printf(" %hhu ", buf[i]);
+    }
+  }
+  printf("\n");
+}
+
+
