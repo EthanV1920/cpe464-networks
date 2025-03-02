@@ -42,18 +42,18 @@ typedef struct {
     uint16_t windowSize;
     uint16_t bufferSize;
     float errorRate;
-    int remoteMachine;
+    char remoteMachine[64];
     int remotePort;
 
 } setupInfo_t;
 
-#define FROM_FILENAME 2
-#define TO_FILENAME 3
-#define WINDOW_SIZE 4
-#define BUFFER_SIZE 5
-#define ERROR_RATE 6
-#define REMOTE_MACHINE 7
-#define REMOTE_PORT 8
+#define FROM_FILENAME 1
+#define TO_FILENAME 2
+#define WINDOW_SIZE 3
+#define BUFFER_SIZE 4
+#define ERROR_RATE 5
+#define REMOTE_MACHINE 6
+#define REMOTE_PORT 7
 #define MAXBUF 80
 
 void talkToServer(int socketNum, struct sockaddr_in6 *server);
@@ -65,10 +65,10 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in6 server; // Supports 4 and 6 but requires IPv6 struct
     setupInfo_t setupInfo;
 
-    // TODO:checkArgs type
     setupInfo = processArgs(argc, argv);
 
-    socketNum = setupUdpClientToServer(&server, argv[1], setupInfo.remotePort);
+    socketNum = setupUdpClientToServer(&server, argv[REMOTE_MACHINE],
+                                       setupInfo.remotePort);
 
     talkToServer(socketNum, &server);
 
@@ -144,22 +144,18 @@ setupInfo_t processArgs(int argc, char *argv[]) {
         exit(1);
     }
 
-    memcpy(args.fromFileName, argv[FROM_FILENAME], 100);
-    memcpy(args.toFileName, argv[TO_FILENAME], 100);
+    printf("Hello \n");
+    strncpy(args.fromFileName, argv[FROM_FILENAME], 100);
+    strncpy(args.toFileName, argv[TO_FILENAME], 100);
     args.windowSize = atoi(argv[WINDOW_SIZE]);
     args.bufferSize = atoi(argv[BUFFER_SIZE]);
     args.errorRate = atof(argv[ERROR_RATE]);
-    args.remoteMachine = atoi(argv[REMOTE_MACHINE]);
+    strncpy(args.remoteMachine, argv[REMOTE_MACHINE], 64);
     args.remotePort = atoi(argv[REMOTE_PORT]);
 
-    // printf("DEBUG: %s %s %d %d %f %d %d\n",
-    //         args.fromFileName,
-    //         args.toFileName,
-    //         args.windowSize,
-    //         args.bufferSize,
-    //         args.errorRate,
-    //         args.remoteMachine,
-    //         args.remotePort);
+    printf("DEBUG: %s %s %d %d %f %s %d\n", args.fromFileName, args.toFileName,
+           args.windowSize, args.bufferSize, args.errorRate, args.remoteMachine,
+           args.remotePort);
 
     return args;
 }

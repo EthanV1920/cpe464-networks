@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C/C++ Runner: Debug Session",
+            "type": "lldb",
+            "request": "launch",
+            "args": [
+                "hello",
+                "hello",
+                "1",
+                "2",
+                ".3",
+                "4",
+                "5"
+            ],
+            "cwd": "/Users/ethanvosburg/Documents/git/cpe464-networks/program3",
+            "program": "/Users/ethanvosburg/Documents/git/cpe464-networks/program3/rcopy"
+        }
+    ]
+}

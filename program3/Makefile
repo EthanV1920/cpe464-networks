@@ -6,7 +6,7 @@
 
 
 CC= gcc
-CFLAGS= -g -Wall
+CFLAGS= -Wall -g -O0 
 LIBS = 
 
 OBJS = networks.o gethostbyname.o pollLib.o safeUtil.o
