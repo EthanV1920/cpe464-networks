@@ -14,10 +14,11 @@
 #include "networks.h"
 #include "safeUtil.h"
 
-#define MAXBUF 80
+#define MAXBUF 150
 
 void processClient(int socketNum);
 int checkArgs(int argc, char *argv[]);
+void printBuf(uint8_t *buf, uint16_t len);
 
 int main ( int argc, char *argv[]  )
 { 
@@ -49,6 +50,7 @@ void processClient(int socketNum)
 	
 		printf("Received message from client with ");
 		printIPInfo(&client);
+        printBuf((uint8_t *)&buffer, dataLen);
 		printf(" Len: %d \'%s\'\n", dataLen, buffer);
 
 		// just for fun send back to client number of bytes received
@@ -77,4 +79,18 @@ int checkArgs(int argc, char *argv[])
 	return portNumber;
 }
 
+
+void printBuf(uint8_t *buf, uint16_t len) {
+    printf("Length: %d\n", len);
+    int r = 0;
+    for (int i = 0; i < len; i++) {
+        i % 8 == 0 ? printf("\n%d\t| ", r++) : printf("");
+        if (buf[i] >= 32 && buf[i] <= 127) {
+            printf("%c\t", (char)buf[i]);
+        } else {
+            printf("%hhu\t", buf[i]);
+        }
+    }
+    printf("\n");
+}
 

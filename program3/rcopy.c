@@ -60,8 +60,10 @@ typedef struct {
 void talkToServer(int socketNum, struct sockaddr_in6 *server);
 int readFromStdin(char *buffer);
 void processArgs(int argc, char *argv[], setupInfo_t *setupInfo);
-int connectString(setupInfo_t *setupInfo);
+int connectBuf(setupInfo_t *setupInfo, int socketNum,
+               struct sockaddr_in6 *server);
 void printBuf(uint8_t *buf, uint16_t len);
+void sendData(uint8_t *buf, uint16_t bufLen, setupInfo_t setupInfo);
 
 int main(int argc, char *argv[]) {
     int socketNum = 0;
@@ -69,19 +71,21 @@ int main(int argc, char *argv[]) {
     setupInfo_t setupInfo;
 
     processArgs(argc, argv, &setupInfo);
+    sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_OFF, DEBUG_ON, RSEED_OFF);
 
     printf("DEBUG: SetupInfo %d %d\n", setupInfo.bufferSize,
            setupInfo.windowSize);
     printBuf((uint8_t *)&setupInfo, sizeof(setupInfo_t));
-    connectString(&setupInfo);
-    // socketNum = setupUdpClientToServer(&server, argv[REMOTE_MACHINE],
-    //                                    setupInfo.remotePort);
-    //
-    // sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_OFF, DEBUG_ON, RSEED_ON);
-    //
-    // talkToServer(socketNum, &server);
-    //
-    // close(socketNum);
+    socketNum = setupUdpClientToServer(&server, setupInfo.remoteMachine,
+                                       setupInfo.remotePort);
+    connectBuf(&setupInfo, socketNum, &server);
+
+    // TODO: add a way to send data better
+    // sendData(buf, bufferSize, setupInfo);
+
+    talkToServer(socketNum, &server);
+
+    close(socketNum);
 
     return 0;
 }
@@ -97,6 +101,8 @@ void talkToServer(int socketNum, struct sockaddr_in6 *server) {
         dataLen = readFromStdin(buffer);
 
         printf("Sending: %s with len: %d\n", buffer, dataLen);
+
+        printBuf((uint8_t *)buffer, dataLen);
 
         sendtoErr(socketNum, buffer, dataLen, 0, (struct sockaddr *)server,
                   serverAddrLen);
@@ -167,35 +173,68 @@ void processArgs(int argc, char *argv[], setupInfo_t *setupInfo) {
            setupInfo->remotePort);
 }
 
-int connectString(setupInfo_t *setupInfo) {
+int connectBuf(setupInfo_t *setupInfo, int socketNum,
+               struct sockaddr_in6 *server) {
     printf("DEBUG: Setting up connection to server %d %d \n",
            setupInfo->bufferSize, setupInfo->windowSize);
-    uint16_t bufferSize = 4 + 2 + 1 + 100 + 2 + 4;
-    uint8_t buf[bufferSize];
+    uint8_t filenameLen = strlen(setupInfo->fromFileName);
+    uint16_t bufferSize = 4 + 2 + 1 + filenameLen + 2 + 4;
+    char buf[bufferSize];
     memset(buf, 0x0, 4);
     memset(buf + 4, 0xF, 2);
     buf[6] = 0x8;
-    memcpy(buf + 7, setupInfo->fromFileName, 100);
+    memcpy(buf + 7, setupInfo->fromFileName, filenameLen);
     uint32_t translatedWinSz = htonl(setupInfo->windowSize);
     uint32_t translatedBufSz = htonl(setupInfo->bufferSize);
-    memcpy(buf + 107, (char *)&translatedWinSz, sizeof(uint32_t));
-    memcpy(buf + 111, (char *)&translatedBufSz, sizeof(uint16_t));
+    memcpy(buf + 7 + filenameLen, (char *)&translatedWinSz, sizeof(uint32_t));
+    memcpy(buf + 11 + filenameLen, (char *)&translatedBufSz, sizeof(uint16_t));
 
-    printBuf(buf, bufferSize);
+    printBuf((uint8_t *)buf, bufferSize);
+    printf("DEBUG: Sending Data... %d\n", setupInfo->remotePort);
+    int serverAddrLen = sizeof(struct sockaddr_in6);
+    // printf("Sending Data Return: %zd\n",
+    //        sendtoErr(setupInfo->remotePort, buf, bufferSize, 0,
+    //                  (struct sockaddr *)setupInfo->remoteMachine,
+    //                  serverAddrLen));
+    // memcpy(buf, "abcd", 4);
+    // buf[3] = '\0';
+    printf("Sending Data Return: %zd\n",
+           sendtoErr(socketNum, buf, bufferSize, 0, (struct sockaddr *)server,
+                     serverAddrLen));
+    // sendData(buf, bufferSize, *setupInfo);
 
-    return 1;
+    return bufferSize;
 }
 
 void printBuf(uint8_t *buf, uint16_t len) {
     printf("Length: %d\n", len);
     int r = 0;
     for (int i = 0; i < len; i++) {
-        i % 8 == 0 ? printf("\n%d\t| ", r++) : printf("");
+        if (i % 8 == 0 && i > 1) {
+            printf("| ");
+            for (int j = i - 8; j <= i; j++) {
+                if (buf[i] >= 32 && buf[j] <= 127) {
+                    printf("\e[38;5;196m%c\e[0m ", (char)buf[j]);
+                } else {
+                    printf("%02x", buf[j]);
+                }
+            }
+            printf("\n%d\t| ", r++);
+        }
         if (buf[i] >= 32 && buf[i] <= 127) {
-            printf("%c\t", (char)buf[i]);
+            printf("\e[38;5;196m%02x\e[0m  ", (char)buf[i]);
         } else {
-            printf("%hhu\t", buf[i]);
+            printf("%02x  ", buf[i]);
         }
     }
     printf("\n");
+}
+
+void sendData(uint8_t *buf, uint16_t bufLen, setupInfo_t setupInfo) {
+    printf("DEBUG: Sending Data... %d\n", setupInfo.remotePort);
+    int serverAddrLen = sizeof(struct sockaddr_in6);
+    printf("Sending Data Return: %zd\n",
+           sendtoErr(setupInfo.remotePort, buf, bufLen, 0,
+                     (struct sockaddr *)setupInfo.remoteMachine,
+                     serverAddrLen));
 }
