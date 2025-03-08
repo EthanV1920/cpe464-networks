@@ -1,96 +1,154 @@
 /* Server side - UDP Code				    */
 /* By Hugh Smith	4/1/2017	*/
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <sys/types.h>
+#include <unistd.h>
 
+#include "checksum.h"
 #include "gethostbyname.h"
 #include "networks.h"
 #include "safeUtil.h"
 
-#define MAXBUF 150
+#define MAXBUF 1407
+
+typedef struct {
+    uint32_t sequenceNum;
+    uint16_t checksum;
+    uint8_t flag;
+
+} __attribute__((packed)) header_t;
 
 void processClient(int socketNum);
 int checkArgs(int argc, char *argv[]);
 void printBuf(uint8_t *buf, uint16_t len);
 
-int main ( int argc, char *argv[]  )
-{ 
-	int socketNum = 0;				
-	int portNumber = 0;
 
-	portNumber = checkArgs(argc, argv);
-		
-	socketNum = udpServerSetup(portNumber);
+int main(int argc, char *argv[]) {
+    int socketNum = 0;
+    int portNumber = 0;
 
-	processClient(socketNum);
+    portNumber = checkArgs(argc, argv);
 
-	close(socketNum);
-	
-	return 0;
+    socketNum = udpServerSetup(portNumber);
+
+    processClient(socketNum);
+
+    close(socketNum);
+
+    return 0;
 }
 
-void processClient(int socketNum)
-{
-	int dataLen = 0; 
-	char buffer[MAXBUF + 1];	  
-	struct sockaddr_in6 client;		
-	int clientAddrLen = sizeof(client);	
-	
-	buffer[0] = '\0';
-	while (buffer[0] != '.')
-	{
-		dataLen = safeRecvfrom(socketNum, buffer, MAXBUF, 0, (struct sockaddr *) &client, &clientAddrLen);
-	
-		printf("Received message from client with ");
-		printIPInfo(&client);
-        printBuf((uint8_t *)&buffer, dataLen);
-		printf(" Len: %d \'%s\'\n", dataLen, buffer);
+void processClient(int socketNum) {
+    int dataLen = 0;
+    char buf[MAXBUF + 1];
+    struct sockaddr_in6 client;
+    header_t *udpHeader;
+    int clientAddrLen = sizeof(client);
+    char fileName[101];
 
-		// just for fun send back to client number of bytes received
-		sprintf(buffer, "bytes: %d", dataLen);
-		safeSendto(socketNum, buffer, strlen(buffer)+1, 0, (struct sockaddr *) & client, clientAddrLen);
+    buf[0] = '\0';
+    while (buf[0] != '.') {
 
-	}
+        dataLen = safeRecvfrom(socketNum, buf, MAXBUF, 0,
+                               (struct sockaddr *)&client, &clientAddrLen);
+
+        udpHeader = (header_t *)buf;
+        // printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
+        // printf("DEBUG: Checksum Value: %x\n", ntohl(udpHeader->checksum));
+        // printf("DEBUG: Sequence Value: %x\n", udpHeader->sequenceNum);
+
+        printf("Received message from client with ");
+        printIPInfo(&client);
+        printBuf((uint8_t *)&buf, dataLen);
+        printf(" Len: %d \'%s\'\n", dataLen, buf);
+
+        switch (udpHeader->flag) {
+
+        case 8:
+            printf("INFO: Flag 8 f.no init\n");
+            memcpy(fileName, buf + 7, 100);
+            fileName[100] = '\0';
+            printf("INFO: FileName: %s\n", fileName);
+            
+            FILE* fp = fopen(fileName, "r");
+            if (fp != 0){
+
+                printf("DEBUG: File opened success\n");
+
+
+            }else{
+
+                fprintf(stderr, "Error: File could not be opened or does not exist");
+            }
+
+            break;
+
+        default:
+            printf("INFO: Flag not found\n");
+            break;
+        }
+
+        // just for fun send back to client number of bytes received
+        sprintf(buf, "bytes: %d", dataLen);
+        safeSendto(socketNum, buf, strlen(buf) + 1, 0,
+                   (struct sockaddr *)&client, clientAddrLen);
+    }
 }
 
-int checkArgs(int argc, char *argv[])
-{
-	// Checks args and returns port number
-	int portNumber = 0;
+int checkArgs(int argc, char *argv[]) {
+    // Checks args and returns port number
+    int portNumber = 0;
 
-	if (argc > 2)
-	{
-		fprintf(stderr, "Usage %s [optional port number]\n", argv[0]);
-		exit(-1);
-	}
-	
-	if (argc == 2)
-	{
-		portNumber = atoi(argv[1]);
-	}
-	
-	return portNumber;
+    if (argc > 2) {
+        fprintf(stderr, "Usage %s [optional port number]\n", argv[0]);
+        exit(-1);
+    }
+
+    if (argc == 2) {
+        portNumber = atoi(argv[1]);
+    }
+
+    return portNumber;
 }
-
 
 void printBuf(uint8_t *buf, uint16_t len) {
     printf("Length: %d\n", len);
-    int r = 0;
-    for (int i = 0; i < len; i++) {
-        i % 8 == 0 ? printf("\n%d\t| ", r++) : printf("");
-        if (buf[i] >= 32 && buf[i] <= 127) {
-            printf("%c\t", (char)buf[i]);
-        } else {
-            printf("%hhu\t", buf[i]);
-        }
-    }
-    printf("\n");
-}
 
+    // Print in groups of 8 bytes per row
+    for (int i = 0; i < len; i += 8) {
+        // Print row offset
+        printf("%04x | ", i);
+
+        // Print hex values
+        for (int j = 0; j < 8; j++) {
+            if (i + j < len) {
+                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
+                    printf("\e[38;5;196m%02x\e[0m  ", buf[i + j]);
+                } else {
+                    printf("%02x  ", buf[i + j]);
+                }
+            } else {
+                printf("    "); // Padding for incomplete final row
+            }
+        }
+
+        // Print ASCII representation
+        printf("| ");
+        for (int j = 0; j < 8; j++) {
+            if (i + j < len) {
+                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
+                    printf("\e[38;5;196m%c\e[0m", buf[i + j]);
+                } else {
+                    printf(".");
+                }
+            }
+        }
+        printf("\n");
+    }
+}
