@@ -37,7 +37,10 @@
 #include "gethostbyname.h"
 #include "networks.h"
 #include "safeUtil.h"
+#include "printBuf.h"
+#include "sendData.h"
 
+#ifdef setupInfo_t
 typedef struct {
     char fromFileName[100];
     char toFileName[100];
@@ -50,6 +53,7 @@ typedef struct {
     struct sockaddr_in6 *server;
 
 } setupInfo_t;
+#endif 
 
 #define FROM_FILENAME 1
 #define TO_FILENAME 2
@@ -64,8 +68,6 @@ void talkToServer(setupInfo_t *setupInfo);
 int readFromStdin(char *buffer);
 void processArgs(int argc, char *argv[], setupInfo_t *setupInfo);
 int connectBuf(setupInfo_t *setupInfo);
-void printBuf(uint8_t *buf, uint16_t len);
-void sendData(char *buf, uint16_t bufLen, setupInfo_t *setupInfo);
 
 int main(int argc, char *argv[]) {
     int socketNum = 0;
@@ -73,19 +75,17 @@ int main(int argc, char *argv[]) {
     setupInfo_t setupInfo;
 
     processArgs(argc, argv, &setupInfo);
-    sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_OFF, DEBUG_ON, RSEED_OFF);
+    sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_ON, DEBUG_ON, RSEED_OFF);
 
     printf("DEBUG: SetupInfo %d %d\n", setupInfo.bufferSize,
            setupInfo.windowSize);
-    printBuf((uint8_t *)&setupInfo, sizeof(setupInfo_t));
+    // printBuf((uint8_t *)&setupInfo, sizeof(setupInfo_t));
     socketNum = setupUdpClientToServer(&server, setupInfo.remoteMachine,
                                        setupInfo.remotePort);
     setupInfo.socketNum = socketNum;
     setupInfo.server = &server;
     connectBuf(&setupInfo);
 
-    // TODO: add a way to send data better
-    // sendData(buf, bufferSize, setupInfo);
 
     talkToServer(&setupInfo);
 
@@ -108,13 +108,13 @@ void talkToServer(setupInfo_t *setupInfo) {
 
         printBuf((uint8_t *)buffer, dataLen);
 
-        // sendtoErr(setupInfo->socketNum, buffer, dataLen, 0,
-        //           (struct sockaddr *)setupInfo->server, serverAddrLen);
 
-        sendData(buffer, dataLen, setupInfo);
+        sendData(buffer, dataLen, 0, 16, setupInfo);
 
         safeRecvfrom(setupInfo->socketNum, buffer, MAXBUF, 0,
                      (struct sockaddr *)setupInfo->server, &serverAddrLen);
+
+        printBuf((uint8_t *)buffer, MAXBUF);
 
         // print out bytes received
         ipString = ipAddressToString(setupInfo->server);
@@ -193,115 +193,26 @@ void processArgs(int argc, char *argv[], setupInfo_t *setupInfo) {
  */
 int connectBuf(setupInfo_t *setupInfo) {
     uint8_t filenameLen = strlen(setupInfo->fromFileName);
-    uint16_t bufferSize = 4 + 2 + 1 + filenameLen + 2 + 4;
+    uint16_t bufferSize = filenameLen + 2 + 4;
     char buf[bufferSize];
 
-    // Set sequence number to 0
-    memset(buf, 0x0, 4);
-
-    // Set checksum to 0 to calculate checksum
-    memset(buf + 4, 0x0, 2);
-
-    // Set f.no flag
-    buf[6] = 0x8;
-
     // Set filename
-    memcpy(buf + 7, setupInfo->fromFileName, filenameLen);
+    memcpy(buf, setupInfo->fromFileName, filenameLen);
 
     // Set windowSize
     uint32_t translatedWinSz = htonl(setupInfo->windowSize);
-    memcpy(buf + 7 + filenameLen, (char *)&translatedWinSz, sizeof(uint32_t));
+    memcpy(buf + filenameLen, (char *)&translatedWinSz, sizeof(uint32_t));
 
     // Set bufferSize
     uint32_t translatedBufSz = htonl(setupInfo->bufferSize);
-    memcpy(buf + 11 + filenameLen, (char *)&translatedBufSz, sizeof(uint16_t));
+    memcpy(buf + 4 + filenameLen, (char *)&translatedBufSz, sizeof(uint16_t));
 
     // int serverAddrLen = sizeof(struct sockaddr_in6);
     // sendtoErr(setupInfo->socketNum, buf, bufferSize, 0,
-              // (struct sockaddr *)setupInfo->server, serverAddrLen);
+    // (struct sockaddr *)setupInfo->server, serverAddrLen);
 
-    sendData(buf, bufferSize, setupInfo);
+    sendData(buf, bufferSize, 0, 8, setupInfo);
 
     return bufferSize;
 }
 
-void printBuf(uint8_t *buf, uint16_t len) {
-    printf("Length: %d\n", len);
-
-    // Print in groups of 8 bytes per row
-    for (int i = 0; i < len; i += 8) {
-        // Print row offset
-        printf("%04x | ", i);
-
-        // Print hex values
-        for (int j = 0; j < 8; j++) {
-            if (i + j < len) {
-                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
-                    printf("\e[38;5;196m%02x\e[0m  ", buf[i + j]);
-                } else {
-                    printf("%02x  ", buf[i + j]);
-                }
-            } else {
-                printf("    "); // Padding for incomplete final row
-            }
-        }
-
-        // Print ASCII representation
-        printf("| ");
-        for (int j = 0; j < 8; j++) {
-            if (i + j < len) {
-                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
-                    printf("\e[38;5;196m%c\e[0m", buf[i + j]);
-                } else {
-                    printf(".");
-                }
-            }
-        }
-        printf("\n");
-    }
-}
-/**
- * This function calculates the checksum and then sends the data packet
- * @param uint8_t *buf, Data buffer to send
- * @param uint16_t bufLen, Length of the buffer to send
- * @param
- */
-void sendData(char *buf, uint16_t bufLen, setupInfo_t *setupInfo) {
-
-    // TODO: need to add connection info
-    // Calculate checksum
-    uint16_t checksum = 0;
-    int serverAddrLen = sizeof(struct sockaddr_in6);
-    checksum = htons(in_cksum((ushort *)buf, bufLen));
-    printf("INFO: checksum = %d\n", checksum);
-
-    printBuf((uint8_t *)buf, bufLen);
-    memcpy(buf + 4, &checksum, sizeof(uint16_t));
-    printBuf((uint8_t *)buf, bufLen);
-
-    // printf("DEBUG: Setting up connection to server %d %d \n",
-    //        setupInfo->bufferSize, setupInfo->windowSize);
-
-    // printf("INFO: Connection bufferSize: %d\n", bufLen);
-    // printBuf((uint8_t *)buf, bufLen);
-    // printf("DEBUG: Sending Data... %d\n", setupInfo->socketNum);
-
-    char *ipString = NULL;
-    ipString = ipAddressToString(setupInfo->server);
-
-    printf("Server with ip: %s and port %d said it received %s\n", ipString,
-           ntohs(setupInfo->server->sin6_port), buf);
-    printf("Sending Data Return: %zd\n",
-           sendtoErr(setupInfo->socketNum, buf, bufLen, 0,
-                     (struct sockaddr *)setupInfo->server, serverAddrLen));
-
-    // sendtoErr(setupInfo->socketNum, buffer, dataLen, 0,
-    //           (struct sockaddr *)setupInfo->server, serverAddrLen);
-
-    // printf("DEBUG: Sending Data... %d\n", setupInfo.remotePort);
-    // int serverAddrLen = sizeof(struct sockaddr_in6);
-    // printf("Sending Data Return: %zd\n",
-    //        sendtoErr(setupInfo.remotePort, buf, bufLen, 0,
-    //                  (struct sockaddr *)setupInfo.remoteMachine,
-    //                  serverAddrLen));
-}

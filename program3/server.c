@@ -11,9 +11,12 @@
 #include <unistd.h>
 
 #include "checksum.h"
+#include "docs/libcpe464_2_21b/libcpe464/networks/network-hooks.h"
 #include "gethostbyname.h"
 #include "networks.h"
+#include "printBuf.h"
 #include "safeUtil.h"
+#include "sendData.h"
 
 #define MAXBUF 1407
 
@@ -24,10 +27,25 @@ typedef struct {
 
 } __attribute__((packed)) header_t;
 
+#ifdef setupInfo_t
+typedef struct {
+    char fromFileName[100];
+    char toFileName[100];
+    uint32_t windowSize;
+    uint16_t bufferSize;
+    float errorRate;
+    char remoteMachine[64];
+    int remotePort;
+    int socketNum;
+    struct sockaddr_in6 *server;
+
+} setupInfo_t;
+#endif
+
 void processClient(int socketNum);
+void handleZombies(int sig);
 int checkArgs(int argc, char *argv[]);
-void printBuf(uint8_t *buf, uint16_t len);
-int verifyData(uint8_t *buf, uint16_t len);
+int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum);
 
 int main(int argc, char *argv[]) {
     int socketNum = 0;
@@ -36,6 +54,9 @@ int main(int argc, char *argv[]) {
     portNumber = checkArgs(argc, argv);
 
     socketNum = udpServerSetup(portNumber);
+
+    // signal(SIGINT, handleZombies);
+    signal(SIGCHLD, handleZombies);
 
     processClient(socketNum);
 
@@ -51,6 +72,9 @@ void processClient(int socketNum) {
     header_t *udpHeader;
     int clientAddrLen = sizeof(client);
     char fileName[101];
+    uint8_t pidCount = 0;
+    int pid = -1;
+    setupInfo_t setupInfo;
 
     buf[0] = '\0';
     while (buf[0] != '.') {
@@ -58,41 +82,82 @@ void processClient(int socketNum) {
         dataLen = safeRecvfrom(socketNum, buf, MAXBUF, 0,
                                (struct sockaddr *)&client, &clientAddrLen);
 
-        verifyData(buf, dataLen);
-
         udpHeader = (header_t *)buf;
+
+        verifyData((uint8_t *)buf, dataLen, udpHeader->checksum);
+
+        setupInfo.server = &client;
+        setupInfo.socketNum = socketNum;
+
         // printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
         // printf("DEBUG: Checksum Value: %x\n", ntohl(udpHeader->checksum));
         // printf("DEBUG: Sequence Value: %x\n", udpHeader->sequenceNum);
 
         printf("Received message from client with ");
-        printIPInfo(&client);
+        // printIPInfo(&client);
+        printIPInfo(setupInfo.server);
         printBuf((uint8_t *)&buf, dataLen);
         printf(" Len: %d \'%s\'\n", dataLen, buf);
 
         switch (udpHeader->flag) {
+            // Then in main add :
+            //
+            //     // We are going to fork() so need to clean up (SIGCHLD),
+            //     where
+            //     // handleZombies is the function
+            //
+            //     // you wrote - see above
+            //     signal(SIGCHLD, handleZombies);
 
-        case 8:
+        case 5: // RR Packet
+            break;
+        case 6: // SREJ Packet
+            break;
+        case 8: // Connect from client to server
             printf("INFO: Flag 8 f.no init\n");
-            memcpy(fileName, buf + 7, 100);
-            fileName[100] = '\0';
-            printf("INFO: FileName: %s\n", fileName);
+            if (pidCount <= 10) {
+                pid = fork();
+            }
+            if (pid == 0) {
+                printf("INFO: Child Process %d\n", getpid());
+                memcpy(fileName, buf + 7, 100);
+                fileName[100] = '\0';
+                printf("INFO: FileName: %s\n", fileName);
 
-            FILE *fp = fopen(fileName, "r");
-            if (fp != 0) {
+                FILE *fp = fopen(fileName, "r");
+                if (fp != 0) {
 
-                printf("DEBUG: File opened success\n");
+                    printf("DEBUG: File opened success\n");
 
-            } else {
+                } else {
 
-                fprintf(stderr,
-                        "Error: File could not be opened or does not exist");
+                    fprintf(
+                        stderr,
+                        "Error: File could not be opened or does not exist\n");
+                    char buf = '\0';
+                    sendData(&buf, 1,  0, 9, &setupInfo);
+
+                }
+
+            } else if (pid > 0) {
+                pidCount++;
+                printf("INFO: this is the parent, Child: %d\n", pid);
             }
 
             break;
-
+        case 9: // Connect response from server
+            break;
+        case 10: // Packet is EOF last packet
+            break;
+        case 16: // Regular data packet
+            printBuf((uint8_t *)buf, dataLen);
+            break;
+        case 17: // Resent data packet after SREJ
+            break;
+        case 18: // Resent data packet after timeout
+            break;
         default:
-            printf("INFO: Flag not found\n");
+            printf("INFO: Flag not found %d\n", udpHeader->flag);
             break;
         }
 
@@ -125,47 +190,17 @@ int checkArgs(int argc, char *argv[]) {
  * @param uint16_t len, length of the data to check
  * @return int result, result of the check
  */
-int verifyData(uint8_t *buf, uint16_t len) {
+int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum) {
     memset(buf + 4, 0, 2);
-
-    uint16_t checksum = ntohs(in_cksum((ushort *)buf, len));
-
-    printf("INFO: Checksum = %d\n", checksum);
-    return checksum;
+    uint16_t calculatedChecksum = ntohs(in_cksum((ushort *)buf, len));
+    printf("INFO: Checksum = %d\n", calculatedChecksum - checksum);
+    return calculatedChecksum - checksum;
 }
 
-void printBuf(uint8_t *buf, uint16_t len) {
-    printf("Length: %d\n", len);
-
-    // Print in groups of 8 bytes per row
-    for (int i = 0; i < len; i += 8) {
-        // Print row offset
-        printf("%04x | ", i);
-
-        // Print hex values
-        for (int j = 0; j < 8; j++) {
-            if (i + j < len) {
-                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
-                    printf("\e[38;5;196m%02x\e[0m  ", buf[i + j]);
-                } else {
-                    printf("%02x  ", buf[i + j]);
-                }
-            } else {
-                printf("    "); // Padding for incomplete final row
-            }
-        }
-
-        // Print ASCII representation
-        printf("| ");
-        for (int j = 0; j < 8; j++) {
-            if (i + j < len) {
-                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
-                    printf("\e[38;5;196m%c\e[0m", buf[i + j]);
-                } else {
-                    printf(".");
-                }
-            }
-        }
-        printf("\n");
+// SIGCHLD handler - clean up terminated processes
+void handleZombies(int sig) {
+    int stat = 0;
+    while (waitpid(-1, &stat, WNOHANG) > 0) {
     }
+    exit(0);
 }
