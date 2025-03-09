@@ -108,10 +108,10 @@ void talkToServer(setupInfo_t *setupInfo) {
 
         printBuf((uint8_t *)buffer, dataLen);
 
-        sendtoErr(setupInfo->socketNum, buffer, dataLen, 0,
-                  (struct sockaddr *)setupInfo->server, serverAddrLen);
+        // sendtoErr(setupInfo->socketNum, buffer, dataLen, 0,
+        //           (struct sockaddr *)setupInfo->server, serverAddrLen);
 
-        // sendData(buffer, dataLen, setupInfo);
+        sendData(buffer, dataLen, setupInfo);
 
         safeRecvfrom(setupInfo->socketNum, buffer, MAXBUF, 0,
                      (struct sockaddr *)setupInfo->server, &serverAddrLen);
@@ -200,7 +200,7 @@ int connectBuf(setupInfo_t *setupInfo) {
     memset(buf, 0x0, 4);
 
     // Set checksum to 0 to calculate checksum
-    memset(buf + 4, 0xF, 2);
+    memset(buf + 4, 0x0, 2);
 
     // Set f.no flag
     buf[6] = 0x8;
@@ -275,7 +275,9 @@ void sendData(char *buf, uint16_t bufLen, setupInfo_t *setupInfo) {
     checksum = htons(in_cksum((ushort *)buf, bufLen));
     printf("INFO: checksum = %d\n", checksum);
 
+    printBuf((uint8_t *)buf, bufLen);
     memcpy(buf + 4, &checksum, sizeof(uint16_t));
+    printBuf((uint8_t *)buf, bufLen);
 
     // printf("DEBUG: Setting up connection to server %d %d \n",
     //        setupInfo->bufferSize, setupInfo->windowSize);

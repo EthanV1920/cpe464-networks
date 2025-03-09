@@ -29,7 +29,6 @@ int checkArgs(int argc, char *argv[]);
 void printBuf(uint8_t *buf, uint16_t len);
 int verifyData(uint8_t *buf, uint16_t len);
 
-
 int main(int argc, char *argv[]) {
     int socketNum = 0;
     int portNumber = 0;
@@ -61,7 +60,6 @@ void processClient(int socketNum) {
 
         verifyData(buf, dataLen);
 
-
         udpHeader = (header_t *)buf;
         // printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
         // printf("DEBUG: Checksum Value: %x\n", ntohl(udpHeader->checksum));
@@ -79,16 +77,16 @@ void processClient(int socketNum) {
             memcpy(fileName, buf + 7, 100);
             fileName[100] = '\0';
             printf("INFO: FileName: %s\n", fileName);
-            
-            FILE* fp = fopen(fileName, "r");
-            if (fp != 0){
+
+            FILE *fp = fopen(fileName, "r");
+            if (fp != 0) {
 
                 printf("DEBUG: File opened success\n");
 
+            } else {
 
-            }else{
-
-                fprintf(stderr, "Error: File could not be opened or does not exist");
+                fprintf(stderr,
+                        "Error: File could not be opened or does not exist");
             }
 
             break;
@@ -121,20 +119,19 @@ int checkArgs(int argc, char *argv[]) {
     return portNumber;
 }
 
-
 /**
- * Verify that the data being recived passes the checksum
+ * Verify that the data being received passes the checksum
  * @param uint8_t *buf, data to check
  * @param uint16_t len, length of the data to check
  * @return int result, result of the check
  */
-int verifyData(uint8_t *buf, uint16_t len){
+int verifyData(uint8_t *buf, uint16_t len) {
+    memset(buf + 4, 0, 2);
 
-    uint16_t result = 0;
+    uint16_t checksum = ntohs(in_cksum((ushort *)buf, len));
 
-
-    return result;
-
+    printf("INFO: Checksum = %d\n", checksum);
+    return checksum;
 }
 
 void printBuf(uint8_t *buf, uint16_t len) {
