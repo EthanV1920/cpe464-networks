@@ -60,12 +60,12 @@ typedef struct {
 #define REMOTE_PORT 7
 #define MAXBUF 80
 
-void talkToServer(int socketNum, struct sockaddr_in6 *server);
+void talkToServer(setupInfo_t *setupInfo);
 int readFromStdin(char *buffer);
 void processArgs(int argc, char *argv[], setupInfo_t *setupInfo);
 int connectBuf(setupInfo_t *setupInfo);
 void printBuf(uint8_t *buf, uint16_t len);
-void sendData(char *buf, uint16_t bufLen, setupInfo_t setupInfo);
+void sendData(char *buf, uint16_t bufLen, setupInfo_t *setupInfo);
 
 int main(int argc, char *argv[]) {
     int socketNum = 0;
@@ -80,22 +80,21 @@ int main(int argc, char *argv[]) {
     printBuf((uint8_t *)&setupInfo, sizeof(setupInfo_t));
     socketNum = setupUdpClientToServer(&server, setupInfo.remoteMachine,
                                        setupInfo.remotePort);
+    setupInfo.socketNum = socketNum;
+    setupInfo.server = &server;
     connectBuf(&setupInfo);
 
     // TODO: add a way to send data better
     // sendData(buf, bufferSize, setupInfo);
 
-    setupInfo.socketNum = socketNum;
-    setupInfo.server = &server;
-
-    talkToServer(socketNum, &server);
+    talkToServer(&setupInfo);
 
     close(socketNum);
 
     return 0;
 }
 
-void talkToServer(int socketNum, struct sockaddr_in6 *server) {
+void talkToServer(setupInfo_t *setupInfo) {
     int serverAddrLen = sizeof(struct sockaddr_in6);
     char *ipString = NULL;
     int dataLen = 0;
@@ -109,16 +108,18 @@ void talkToServer(int socketNum, struct sockaddr_in6 *server) {
 
         printBuf((uint8_t *)buffer, dataLen);
 
-        sendtoErr(socketNum, buffer, dataLen, 0, (struct sockaddr *)server,
-                  serverAddrLen);
+        sendtoErr(setupInfo->socketNum, buffer, dataLen, 0,
+                  (struct sockaddr *)setupInfo->server, serverAddrLen);
 
-        safeRecvfrom(socketNum, buffer, MAXBUF, 0, (struct sockaddr *)server,
-                     &serverAddrLen);
+        // sendData(buffer, dataLen, setupInfo);
+
+        safeRecvfrom(setupInfo->socketNum, buffer, MAXBUF, 0,
+                     (struct sockaddr *)setupInfo->server, &serverAddrLen);
 
         // print out bytes received
-        ipString = ipAddressToString(server);
+        ipString = ipAddressToString(setupInfo->server);
         printf("Server with ip: %s and port %d said it received %s\n", ipString,
-               ntohs(server->sin6_port), buffer);
+               ntohs(setupInfo->server->sin6_port), buffer);
     }
 }
 
@@ -215,7 +216,11 @@ int connectBuf(setupInfo_t *setupInfo) {
     uint32_t translatedBufSz = htonl(setupInfo->bufferSize);
     memcpy(buf + 11 + filenameLen, (char *)&translatedBufSz, sizeof(uint16_t));
 
-    sendData(buf, bufferSize, *setupInfo);
+    // int serverAddrLen = sizeof(struct sockaddr_in6);
+    // sendtoErr(setupInfo->socketNum, buf, bufferSize, 0,
+              // (struct sockaddr *)setupInfo->server, serverAddrLen);
+
+    sendData(buf, bufferSize, setupInfo);
 
     return bufferSize;
 }
@@ -261,26 +266,35 @@ void printBuf(uint8_t *buf, uint16_t len) {
  * @param uint16_t bufLen, Length of the buffer to send
  * @param
  */
-void sendData(char *buf, uint16_t bufLen, setupInfo_t setupInfo) {
+void sendData(char *buf, uint16_t bufLen, setupInfo_t *setupInfo) {
 
     // TODO: need to add connection info
     // Calculate checksum
     uint16_t checksum = 0;
-    int serverAddrLen = sizeof(struct sockaddr);
+    int serverAddrLen = sizeof(struct sockaddr_in6);
     checksum = htons(in_cksum((ushort *)buf, bufLen));
     printf("INFO: checksum = %d\n", checksum);
 
     memcpy(buf + 4, &checksum, sizeof(uint16_t));
 
-    printf("DEBUG: Setting up connection to server %d %d \n",
-           setupInfo.bufferSize, setupInfo.windowSize);
+    // printf("DEBUG: Setting up connection to server %d %d \n",
+    //        setupInfo->bufferSize, setupInfo->windowSize);
 
-    printf("INFO: Connection bufferSize: %d\n", bufLen);
-    printBuf((uint8_t *)buf, bufLen);
-    printf("DEBUG: Sending Data... %d\n", setupInfo.remotePort);
+    // printf("INFO: Connection bufferSize: %d\n", bufLen);
+    // printBuf((uint8_t *)buf, bufLen);
+    // printf("DEBUG: Sending Data... %d\n", setupInfo->socketNum);
+
+    char *ipString = NULL;
+    ipString = ipAddressToString(setupInfo->server);
+
+    printf("Server with ip: %s and port %d said it received %s\n", ipString,
+           ntohs(setupInfo->server->sin6_port), buf);
     printf("Sending Data Return: %zd\n",
-           sendtoErr(setupInfo.socketNum, buf, bufLen, 0,
-                     (struct sockaddr *)setupInfo.server, serverAddrLen));
+           sendtoErr(setupInfo->socketNum, buf, bufLen, 0,
+                     (struct sockaddr *)setupInfo->server, serverAddrLen));
+
+    // sendtoErr(setupInfo->socketNum, buffer, dataLen, 0,
+    //           (struct sockaddr *)setupInfo->server, serverAddrLen);
 
     // printf("DEBUG: Sending Data... %d\n", setupInfo.remotePort);
     // int serverAddrLen = sizeof(struct sockaddr_in6);

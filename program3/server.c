@@ -27,6 +27,7 @@ typedef struct {
 void processClient(int socketNum);
 int checkArgs(int argc, char *argv[]);
 void printBuf(uint8_t *buf, uint16_t len);
+int verifyData(uint8_t *buf, uint16_t len);
 
 
 int main(int argc, char *argv[]) {
@@ -57,6 +58,9 @@ void processClient(int socketNum) {
 
         dataLen = safeRecvfrom(socketNum, buf, MAXBUF, 0,
                                (struct sockaddr *)&client, &clientAddrLen);
+
+        verifyData(buf, dataLen);
+
 
         udpHeader = (header_t *)buf;
         // printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
@@ -115,6 +119,22 @@ int checkArgs(int argc, char *argv[]) {
     }
 
     return portNumber;
+}
+
+
+/**
+ * Verify that the data being recived passes the checksum
+ * @param uint8_t *buf, data to check
+ * @param uint16_t len, length of the data to check
+ * @return int result, result of the check
+ */
+int verifyData(uint8_t *buf, uint16_t len){
+
+    uint16_t result = 0;
+
+
+    return result;
+
 }
 
 void printBuf(uint8_t *buf, uint16_t len) {
