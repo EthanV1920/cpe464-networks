@@ -14,40 +14,25 @@
 #include "docs/libcpe464_2_21b/libcpe464/networks/network-hooks.h"
 #include "gethostbyname.h"
 #include "networks.h"
+#include "pollLib.h"
 #include "printBuf.h"
 #include "safeUtil.h"
 #include "sendData.h"
+#include "net_struct.h"
 
 #define MAXBUF 1407
 
-typedef struct {
-    uint32_t sequenceNum;
-    uint16_t checksum;
-    uint8_t flag;
-
-} __attribute__((packed)) header_t;
-
-#ifdef setupInfo_t
-typedef struct {
-    char fromFileName[100];
-    char toFileName[100];
-    uint32_t windowSize;
-    uint16_t bufferSize;
-    float errorRate;
-    char remoteMachine[64];
-    int remotePort;
-    int socketNum;
-    struct sockaddr_in6 *server;
-
-} setupInfo_t;
-#endif
 
 void processClient(int socketNum);
 void handleZombies(int sig);
+void gracefulClosing(int sig);
 int checkArgs(int argc, char *argv[]);
 int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum);
 
 int main(int argc, char *argv[]) {
+#ifdef DEBUG
+    printf("DEBUGGING ON\n");
+#endif
     int socketNum = 0;
     int portNumber = 0;
 
@@ -55,7 +40,7 @@ int main(int argc, char *argv[]) {
 
     socketNum = udpServerSetup(portNumber);
 
-    // signal(SIGINT, handleZombies);
+    signal(SIGINT, gracefulClosing);
     signal(SIGCHLD, handleZombies);
 
     processClient(socketNum);
@@ -89,9 +74,11 @@ void processClient(int socketNum) {
         setupInfo.server = &client;
         setupInfo.socketNum = socketNum;
 
-        // printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
-        // printf("DEBUG: Checksum Value: %x\n", ntohl(udpHeader->checksum));
-        // printf("DEBUG: Sequence Value: %x\n", udpHeader->sequenceNum);
+#ifdef DEBUG
+        printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
+        printf("DEBUG: Checksum Value: %x\n", ntohl(udpHeader->checksum));
+        printf("DEBUG: Sequence Value: %x\n", udpHeader->sequenceNum);
+#endif
 
         printf("Received message from client with ");
         // printIPInfo(&client);
@@ -117,7 +104,16 @@ void processClient(int socketNum) {
             printf("INFO: Flag 8 f.no init\n");
             if (pidCount <= 10) {
                 pid = fork();
+
+                /// Set up polling ///
+                setupPollSet();
+                addToPollSet(setupInfo.socketNum);
+                addToPollSet(STDIN_FILENO);
+
+                sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_ON, DEBUG_ON,
+                             RSEED_OFF);
             }
+
             if (pid == 0) {
                 printf("INFO: Child Process %d\n", getpid());
                 memcpy(fileName, buf + 7, 100);
@@ -127,16 +123,20 @@ void processClient(int socketNum) {
                 FILE *fp = fopen(fileName, "r");
                 if (fp != 0) {
 
+#ifdef DEBUG
                     printf("DEBUG: File opened success\n");
+
+#endif
+                    char buf[] = "GOOD FILE";
+                    sendData(buf, 1, 0, 9, &setupInfo);
 
                 } else {
 
                     fprintf(
                         stderr,
                         "Error: File could not be opened or does not exist\n");
-                    char buf = '\0';
-                    sendData(&buf, 1,  0, 9, &setupInfo);
-
+                    char buf[] = "BAD FILE";
+                    sendData(buf, 1, 0, 9, &setupInfo);
                 }
 
             } else if (pid > 0) {
@@ -151,6 +151,8 @@ void processClient(int socketNum) {
             break;
         case 16: // Regular data packet
             printBuf((uint8_t *)buf, dataLen);
+            char buf[] = "MSG WAS RECEIVED";
+            sendData(buf, 17, 0, 9, &setupInfo);
             break;
         case 17: // Resent data packet after SREJ
             break;
@@ -162,9 +164,9 @@ void processClient(int socketNum) {
         }
 
         // just for fun send back to client number of bytes received
-        sprintf(buf, "bytes: %d", dataLen);
-        safeSendto(socketNum, buf, strlen(buf) + 1, 0,
-                   (struct sockaddr *)&client, clientAddrLen);
+        // sprintf(buf, "bytes: %d", dataLen);
+        // safeSendto(socketNum, buf, strlen(buf) + 1, 0,
+        //            (sruct sockaddr *)&client, clientAddrLen);
     }
 }
 
@@ -191,9 +193,15 @@ int checkArgs(int argc, char *argv[]) {
  * @return int result, result of the check
  */
 int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum) {
+    // Zero out the data to take checksum
     memset(buf + 4, 0, 2);
+
+    // Calculate checksum
     uint16_t calculatedChecksum = ntohs(in_cksum((ushort *)buf, len));
-    printf("INFO: Checksum = %d\n", calculatedChecksum - checksum);
+
+#ifdef DEBUG
+    printf("DEBUG: Checksum = %d\n", calculatedChecksum - checksum);
+#endif
     return calculatedChecksum - checksum;
 }
 
@@ -202,5 +210,12 @@ void handleZombies(int sig) {
     int stat = 0;
     while (waitpid(-1, &stat, WNOHANG) > 0) {
     }
+    exit(0);
+}
+
+void gracefulClosing(int sig) {
+
+    printf("\n\nINFO: Gracefully Closing...\n");
+
     exit(0);
 }

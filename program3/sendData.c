@@ -46,7 +46,7 @@ void sendData(char *buf, uint16_t bufLen, uint32_t sequence, uint8_t flag,
     printf("Server with ip: %s and port %d said it received %s\n", ipString,
            ntohs(setupInfo->server->sin6_port), sendBuf);
 
-    printf("Sending Data Return: %zd\n",
+    printf("Sending Data Result: %zd\n",
            sendtoErr(setupInfo->socketNum, sendBuf, bufLen + 7, 0,
                      (struct sockaddr *)setupInfo->server, serverAddrLen));
 }

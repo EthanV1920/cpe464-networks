@@ -10,37 +10,43 @@
 #include "printBuf.h"
 
 void printBuf(uint8_t *buf, uint16_t len) {
-    printf("Length: %d\n", len);
+    uint8_t printingActive = 0;
+#ifdef DEBUG
+    printingActive = 1;
+#endif
+    if (printingActive) {
+        printf("Length: %d\n", len);
 
-    // Print in groups of 8 bytes per row
-    for (int i = 0; i < len; i += 8) {
-        // Print row offset
-        printf("%04x | ", i);
+        // Print in groups of 8 bytes per row
+        for (int i = 0; i < len; i += 8) {
+            // Print row offset
+            printf("%04x | ", i);
 
-        // Print hex values
-        for (int j = 0; j < 8; j++) {
-            if (i + j < len) {
-                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
-                    printf("\e[38;5;196m%02x\e[0m  ", buf[i + j]);
+            // Print hex values
+            for (int j = 0; j < 8; j++) {
+                if (i + j < len) {
+                    if (buf[i + j] >= 32 && buf[i + j] <= 127) {
+                        printf("\e[38;5;196m%02x\e[0m  ", buf[i + j]);
+                    } else {
+                        printf("%02x  ", buf[i + j]);
+                    }
                 } else {
-                    printf("%02x  ", buf[i + j]);
-                }
-            } else {
-                printf("    "); // Padding for incomplete final row
-            }
-        }
-
-        // Print ASCII representation
-        printf("| ");
-        for (int j = 0; j < 8; j++) {
-            if (i + j < len) {
-                if (buf[i + j] >= 32 && buf[i + j] <= 127) {
-                    printf("\e[38;5;196m%c\e[0m", buf[i + j]);
-                } else {
-                    printf(".");
+                    printf("    "); // Padding for incomplete final row
                 }
             }
+
+            // Print ASCII representation
+            printf("| ");
+            for (int j = 0; j < 8; j++) {
+                if (i + j < len) {
+                    if (buf[i + j] >= 32 && buf[i + j] <= 127) {
+                        printf("\e[38;5;196m%c\e[0m", buf[i + j]);
+                    } else {
+                        printf(".");
+                    }
+                }
+            }
+            printf("\n");
         }
-        printf("\n");
     }
 }

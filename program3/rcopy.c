@@ -36,24 +36,10 @@
 #include "docs/libcpe464_2_21b/libcpe464/networks/network-hooks.h"
 #include "gethostbyname.h"
 #include "networks.h"
-#include "safeUtil.h"
+#include "pollLib.h"
 #include "printBuf.h"
+#include "safeUtil.h"
 #include "sendData.h"
-
-#ifdef setupInfo_t
-typedef struct {
-    char fromFileName[100];
-    char toFileName[100];
-    uint32_t windowSize;
-    uint16_t bufferSize;
-    float errorRate;
-    char remoteMachine[64];
-    int remotePort;
-    int socketNum;
-    struct sockaddr_in6 *server;
-
-} setupInfo_t;
-#endif 
 
 #define FROM_FILENAME 1
 #define TO_FILENAME 2
@@ -70,22 +56,36 @@ void processArgs(int argc, char *argv[], setupInfo_t *setupInfo);
 int connectBuf(setupInfo_t *setupInfo);
 
 int main(int argc, char *argv[]) {
+#ifdef DEBUG
+    printf("DEBUGGING ON\n");
+#endif
     int socketNum = 0;
     struct sockaddr_in6 server; // Supports 4 and 6 but requires IPv6 struct
     setupInfo_t setupInfo;
 
     processArgs(argc, argv, &setupInfo);
+#ifdef DEBUG
     sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_ON, DEBUG_ON, RSEED_OFF);
+#else
+    sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_ON, DEBUG_OFF, RSEED_ON);
+#endif
 
+#ifdef DEBUG
     printf("DEBUG: SetupInfo %d %d\n", setupInfo.bufferSize,
            setupInfo.windowSize);
+#endif
     // printBuf((uint8_t *)&setupInfo, sizeof(setupInfo_t));
     socketNum = setupUdpClientToServer(&server, setupInfo.remoteMachine,
                                        setupInfo.remotePort);
+    /// Set up polling ///
+    setupPollSet();
+    addToPollSet(socketNum);
+    addToPollSet(STDIN_FILENO);
+
     setupInfo.socketNum = socketNum;
     setupInfo.server = &server;
-    connectBuf(&setupInfo);
 
+    connectBuf(&setupInfo);
 
     talkToServer(&setupInfo);
 
@@ -98,28 +98,95 @@ void talkToServer(setupInfo_t *setupInfo) {
     int serverAddrLen = sizeof(struct sockaddr_in6);
     char *ipString = NULL;
     int dataLen = 0;
-    char buffer[MAXBUF + 1];
+    char buf[MAXBUF + 1];
+    int pollResult = 0;
 
-    buffer[0] = '\0';
-    while (buffer[0] != '.') {
-        dataLen = readFromStdin(buffer);
+    struct sockaddr_in6 client;
+    header_t *udpHeader;
+    int clientAddrLen = sizeof(client);
+    char fileName[101];
+    uint8_t pidCount = 0;
+    int pid = -1;
 
-        printf("Sending: %s with len: %d\n", buffer, dataLen);
+    buf[0] = '\0';
+    while (buf[0] != '.') {
+        pollResult = pollCall(-1);
 
-        printBuf((uint8_t *)buffer, dataLen);
+        // Available message in stdin
+        if (pollResult == STDIN_FILENO) {
+            printf("INFO: POLL RESULT\n");
+            // processStdin(clientSocket);
 
+        } else if (pollResult == setupInfo->socketNum) {
+            printf("INFO: POLL CLOSED\n");
+            // processMsgFromServer(clientSocket);    // Terminate client socket
+        }
+        dataLen = readFromStdin(buf);
 
-        sendData(buffer, dataLen, 0, 16, setupInfo);
+        printf("Sending: %s with len: %d\n", buf, dataLen);
 
-        safeRecvfrom(setupInfo->socketNum, buffer, MAXBUF, 0,
+        printBuf((uint8_t *)buf, dataLen);
+
+        // sendData(buf, dataLen, 0, 16, setupInfo);
+        connectBuf(setupInfo);
+
+        safeRecvfrom(setupInfo->socketNum, buf, MAXBUF, 0,
                      (struct sockaddr *)setupInfo->server, &serverAddrLen);
 
-        printBuf((uint8_t *)buffer, MAXBUF);
+        // Print what is received from the server
+        printBuf((uint8_t *)buf, MAXBUF);
 
         // print out bytes received
         ipString = ipAddressToString(setupInfo->server);
         printf("Server with ip: %s and port %d said it received %s\n", ipString,
-               ntohs(setupInfo->server->sin6_port), buffer);
+               ntohs(setupInfo->server->sin6_port), buf);
+
+        // dataLen = safeRecvfrom(socketNum, buf, MAXBUF, 0,
+        //                        (struct sockaddr *)&client, &clientAddrLen);
+
+        udpHeader = (header_t *)buf;
+
+        // verifyData((uint8_t *)buf, dataLen, udpHeader->checksum);
+        //
+        // setupInfo.server = &client;
+        // setupInfo.socketNum = socketNum;
+
+#ifdef DEBUG
+        printf("DEBUG: Flag Value: %x\n", udpHeader->flag);
+        printf("DEBUG: Checksum Value: %x\n", ntohl(udpHeader->checksum));
+        printf("DEBUG: Sequence Value: %x\n", udpHeader->sequenceNum);
+#endif
+
+        printf("Received message from client with ");
+        printIPInfo(&client);
+        printIPInfo(setupInfo->server);
+        printBuf((uint8_t *)&buf, dataLen);
+        printf(" Len: %d \'%s\'\n", dataLen, buf);
+
+        switch (udpHeader->flag) {
+        case 5: // RR Packet
+            break;
+        case 6: // SREJ Packet
+            break;
+        case 8: // Connect from client to server
+            break;
+        case 9: // Connect response from server
+            break;
+        case 10: // Packet is EOF last packet
+            break;
+        case 16: // Regular data packet
+            printBuf((uint8_t *)buf, dataLen);
+            char buf[] = "MSG WAS RECEIVED";
+            sendData(buf, 17, 0, 9, setupInfo);
+            break;
+        case 17: // Resent data packet after SREJ
+            break;
+        case 18: // Resent data packet after timeout
+            break;
+        default:
+            printf("INFO: Flag not found %d\n", udpHeader->flag);
+            break;
+        }
     }
 }
 
@@ -173,16 +240,17 @@ void processArgs(int argc, char *argv[], setupInfo_t *setupInfo) {
     // int setupInfoSz = 100 + 100 + 4 + 2 + 4 + 64 + 2;
     // printBuf((uint8_t *)&setupInfo, setupInfoSz);
 
+#ifdef DEBUG
     printf("DEBUG: %s %s %d %d %f %s %d\n", setupInfo->fromFileName,
            setupInfo->toFileName, setupInfo->windowSize, setupInfo->bufferSize,
            setupInfo->errorRate, setupInfo->remoteMachine,
            setupInfo->remotePort);
+#endif
 }
 
 /**
  * This function create the packet that is needed to connect to the server:
  * - sequence number: 0000
- * - checksum
  * - flag: 8
  * - from filename
  * - window size
@@ -196,6 +264,10 @@ int connectBuf(setupInfo_t *setupInfo) {
     uint16_t bufferSize = filenameLen + 2 + 4;
     char buf[bufferSize];
 
+#ifdef DEBUG
+    printf("DEBUG: Sending connection buffer\n");
+#endif
+
     // Set filename
     memcpy(buf, setupInfo->fromFileName, filenameLen);
 
@@ -207,12 +279,7 @@ int connectBuf(setupInfo_t *setupInfo) {
     uint32_t translatedBufSz = htonl(setupInfo->bufferSize);
     memcpy(buf + 4 + filenameLen, (char *)&translatedBufSz, sizeof(uint16_t));
 
-    // int serverAddrLen = sizeof(struct sockaddr_in6);
-    // sendtoErr(setupInfo->socketNum, buf, bufferSize, 0,
-    // (struct sockaddr *)setupInfo->server, serverAddrLen);
-
     sendData(buf, bufferSize, 0, 8, setupInfo);
 
     return bufferSize;
 }
-

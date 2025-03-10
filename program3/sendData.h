@@ -25,19 +25,7 @@
 #include "gethostbyname.h"
 #include "safeUtil.h"
 #include "printBuf.h"
-
-typedef struct {
-    char fromFileName[100];
-    char toFileName[100];
-    uint32_t windowSize;
-    uint16_t bufferSize;
-    float errorRate;
-    char remoteMachine[64];
-    int remotePort;
-    int socketNum;
-    struct sockaddr_in6 *server;
-
-} setupInfo_t;
+#include "net_struct.h"
 
 void sendData(char *buf, uint16_t bufLen, uint32_t sequence, uint8_t flag,
               setupInfo_t *setupInfo);

@@ -13,8 +13,12 @@ OBJS = networks.o gethostbyname.o pollLib.o safeUtil.o printBuf.o sendData.o
 
 # Uncomment next two lines if your using sendtoErr() library
 LIBS += libcpe464.2.21.a -lstdc++ -ldl
-CFLAGS += -D__LIBCPE464_
 
+ifeq ($(DEBUG), 1)
+	DEBUG_FLAG = -DDEBUG
+endif
+
+CFLAGS += -D__LIBCPE464_ $(DEBUG_FLAG)
 
 all: udpAll
 
@@ -28,6 +32,10 @@ server: server.c $(OBJS)
 
 .c.o:
 	gcc -c $(CFLAGS) $< -o $@ $(LIBS)
+
+debug:
+	$(MAKE) clean
+	$(MAKE) DEBUG=1 all
 
 cleano:
 	rm -f *.o
