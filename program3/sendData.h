@@ -30,3 +30,4 @@
 void sendData(char *buf, uint16_t bufLen, uint32_t sequence, uint8_t flag,
               setupInfo_t *setupInfo);
 
+int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum);

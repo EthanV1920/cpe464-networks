@@ -50,3 +50,25 @@ void sendData(char *buf, uint16_t bufLen, uint32_t sequence, uint8_t flag,
            sendtoErr(setupInfo->socketNum, sendBuf, bufLen + 7, 0,
                      (struct sockaddr *)setupInfo->server, serverAddrLen));
 }
+
+/**
+ * Verify that the data being received passes the checksum
+ * @param uint8_t *buf, data to check
+ * @param uint16_t len, length of the data to check
+ * @return int result, result of the check
+ */
+int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum) {
+    // Zero out the data to take checksum
+    memset(buf + 4, 0, 2);
+
+    // Calculate checksum
+    uint16_t calculatedChecksum = ntohs(in_cksum((ushort *)buf, len));
+
+#ifdef DEBUG
+    printf("DEBUG: Checksum = ");
+    !(calculatedChecksum - checksum)
+        ? printf("\x1B[32m0\x1B[0m\n")
+        : printf("\x1B[31m%d\x1B[0m\n", calculatedChecksum - checksum);
+#endif
+    return calculatedChecksum - checksum;
+}
