@@ -26,6 +26,7 @@ void processClient(int socketNum);
 void handleZombies(int sig);
 void gracefulClosing(int sig);
 int checkArgs(int argc, char *argv[]);
+void handleSend(setupInfo_t *setupInfo, char *buf);
 int verifyData(uint8_t *buf, uint16_t len, uint16_t checksum);
 
 int main(int argc, char *argv[]) {
@@ -56,22 +57,12 @@ void processClient(int socketNum) {
     header_t *udpHeader;
     int clientAddrLen = sizeof(client);
     char fileName[101];
+    setupInfo_t setupInfo;
     uint8_t pidCount = 0;
     int pid = -1;
-    setupInfo_t setupInfo;
-    int upper = setupInfo.windowSize;
-    int lower = 0;
-    int current = 0;
-    int seq = 0;
-    FILE *fp = NULL;
-    // char *window[setupInfo.windowSize];
-    // for (int i = 0; i < setupInfo.windowSize; i++) {
-    //
-    //     window[i] = malloc(setupInfo.bufferSize * sizeof(char));
-    // }
 
     buf[0] = '\0';
-    while (buf[0] != '.') {
+    while (pollCall(0)) {
 
         dataLen = safeRecvfrom(socketNum, buf, MAXBUF, 0,
                                (struct sockaddr *)&client, &clientAddrLen);
@@ -117,52 +108,17 @@ void processClient(int socketNum) {
             break;
         case 8: // Connect from client to server
             printf("INFO: Flag 8 f.no init\n");
+            // Getting windowSize and bufferSize
+            
             if (pidCount <= 10) {
                 pid = fork();
-
-                /// Set up polling ///
-                setupPollSet();
-                addToPollSet(setupInfo.socketNum);
-                addToPollSet(STDIN_FILENO);
-
-                sendErr_init(setupInfo.errorRate, DROP_ON, FLIP_ON, DEBUG_ON,
-                             RSEED_OFF);
-            }
-
-            if (pid == 0) {
-                printf("INFO: Child Process %d\n", getpid());
-                memcpy(fileName, buf + 7, 100);
-                fileName[100] = '\0';
-                printf("INFO: FileName: %s\n", fileName);
-
-                fp = fopen(fileName, "r");
-                if (fp != 0) {
-
-#ifdef DEBUG
-                    printf("DEBUG: File opened success\n");
-
-#endif
-                    char buf[] = "GOOD FILE";
-                    sendData(buf, 1, 0, 9, &setupInfo);
-
-                    while (fread(buf, 1, 10, fp)) {
-                        // fread(window[seq++], sizeof(char),
-                        // setupInfo.bufferSize, fp); fread(buf, 1, 10, fp);
-                        sendData(buf, 10, seq++, 16, &setupInfo);
-                    }
-
-                } else {
-
-                    fprintf(
-                        stderr,
-                        "Error: File could not be opened or does not exist\n");
-                    char buf[] = "BAD FILE";
-                    sendData(buf, 1, 0, 9, &setupInfo);
+                if (pid == 0) {
+                    printf("INFO: Child Process %d\n", getpid());
+                    handleSend(&setupInfo, buf);
+                } else if (pid > 0) {
+                    pidCount++;
+                    printf("INFO: this is the parent, Child: %d\n", pid);
                 }
-
-            } else if (pid > 0) {
-                pidCount++;
-                printf("INFO: this is the parent, Child: %d\n", pid);
             }
 
             break;
@@ -184,17 +140,79 @@ void processClient(int socketNum) {
             break;
         }
 
-        // if (rr > lower) {
-        // while (fread(buf,1,10,fp)) {
-        //     // fread(window[seq++], sizeof(char), setupInfo.bufferSize, fp);
-        //     // fread(buf, 1, 10, fp);
-        //     sendData(buf, 10, seq++, 16, &setupInfo);
-        // }
         // just for fun send back to client number of bytes received
         // sprintf(buf, "bytes: %d", dataLen);
         // safeSendto(socketNum, buf, strlen(buf) + 1, 0,
         //            (sruct sockaddr *)&client, clientAddrLen);
     }
+}
+
+void handleSend(setupInfo_t *setupInfo, char *buf) {
+    int dataLen = 0;
+    struct sockaddr_in6 client;
+    header_t *udpHeader;
+    int clientAddrLen = sizeof(client);
+    char fileName[101];
+    int upper = setupInfo->windowSize;
+    int lower = 0;
+    int current = 0;
+    int seq = 0;
+    int rr = -1;
+    FILE *fp = NULL;
+    char *window[setupInfo->windowSize];
+    for (int i = 0; i < setupInfo->windowSize; i++) {
+
+        printf("Setting up window %d\n", i);
+
+        window[i] = (char *)malloc(setupInfo->bufferSize * sizeof(char));
+    }
+    /// Set up polling ///
+    setupPollSet();
+    addToPollSet(setupInfo->socketNum);
+    addToPollSet(STDIN_FILENO);
+
+    sendErr_init(setupInfo->errorRate, DROP_ON, FLIP_ON, DEBUG_ON, RSEED_OFF);
+
+    printf("INFO: Child Process %d\n", getpid());
+    memcpy(fileName, buf + 7, 100);
+    fileName[100] = '\0';
+    printf("INFO: FileName: %s\n", fileName);
+
+    fp = fopen(fileName, "r");
+    if (fp != 0) {
+
+#ifdef DEBUG
+        printf("DEBUG: File opened success\n");
+
+#endif
+        char buf[] = "GOOD FILE";
+        sendData(buf, 1, 0, 9, setupInfo);
+
+        // while (fread(buf, 1, 10, fp)) {
+        //     // fread(window[seq++], sizeof(char),
+        //     // setupInfo->bufferSize, fp); fread(buf, 1, 10, fp);
+        // sendData(buf, 10, seq++, 16, &setupInfo);
+        // }
+
+    } else {
+
+        fprintf(stderr, "Error: File could not be opened or does not exist\n");
+        char buf[] = "BAD FILE";
+        sendData(buf, 1, 0, 9, setupInfo);
+    }
+
+    while (fread(window[seq++], sizeof(char), setupInfo->bufferSize, fp)) {
+
+        // if (rr > lower) {
+        // while (fread(buf,1,10,fp)) {
+        // fread(window[seq++], sizeof(char), setupInfo->bufferSize, fp);
+        // fread(buf, 1, 10, fp);
+        // sendData(buf, 10, seq++, 16, &setupInfo);
+        printf("I am going to send data now\n");
+        sendData(window[seq], setupInfo->bufferSize, seq, 16, setupInfo);
+    }
+
+    exit(0);
 }
 
 int checkArgs(int argc, char *argv[]) {

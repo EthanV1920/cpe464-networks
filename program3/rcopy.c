@@ -113,11 +113,11 @@ void talkToServer(setupInfo_t *setupInfo) {
         //
         // Available message in stdin
         if (pollResult == STDIN_FILENO) {
-            printf("INFO: POLL RESULT\n");
+            // printf("INFO: POLL RESULT\n");
             // processStdin(clientSocket);
 
         } else if (pollResult == setupInfo->socketNum) {
-            printf("INFO: POLL CLOSED\n");
+            // printf("INFO: POLL CLOSED\n");
             // processMsgFromServer(clientSocket);    // Terminate client socket
         }
 
@@ -278,7 +278,7 @@ int connectBuf(setupInfo_t *setupInfo) {
     memcpy(buf + filenameLen, (char *)&translatedWinSz, sizeof(uint32_t));
 
     // Set bufferSize
-    uint32_t translatedBufSz = htonl(setupInfo->bufferSize);
+    uint16_t translatedBufSz = htons(setupInfo->bufferSize);
     memcpy(buf + 4 + filenameLen, (char *)&translatedBufSz, sizeof(uint16_t));
 
     sendData(buf, bufferSize, 0, 8, setupInfo);
