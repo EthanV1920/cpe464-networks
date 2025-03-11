@@ -80,7 +80,6 @@ int main(int argc, char *argv[]) {
     /// Set up polling ///
     setupPollSet();
     addToPollSet(socketNum);
-    addToPollSet(STDIN_FILENO);
 
     setupInfo.socketNum = socketNum;
     setupInfo.server = &server;
@@ -109,9 +108,9 @@ void talkToServer(setupInfo_t *setupInfo) {
     int pid = -1;
 
     buf[0] = '\0';
-    while (buf[0] != '.') {
-        pollResult = pollCall(-1);
-
+    while (pollCall(1000) != -1) {
+        // pollResult = pollCall(-1);
+        //
         // Available message in stdin
         if (pollResult == STDIN_FILENO) {
             printf("INFO: POLL RESULT\n");
@@ -121,25 +120,24 @@ void talkToServer(setupInfo_t *setupInfo) {
             printf("INFO: POLL CLOSED\n");
             // processMsgFromServer(clientSocket);    // Terminate client socket
         }
-        dataLen = readFromStdin(buf);
 
         printf("Sending: %s with len: %d\n", buf, dataLen);
 
         printBuf((uint8_t *)buf, dataLen);
 
         // sendData(buf, dataLen, 0, 16, setupInfo);
-        connectBuf(setupInfo);
+        // connectBuf(setupInfo);
 
         safeRecvfrom(setupInfo->socketNum, buf, MAXBUF, 0,
                      (struct sockaddr *)setupInfo->server, &serverAddrLen);
 
         // Print what is received from the server
-        printBuf((uint8_t *)buf, MAXBUF);
+        // printBuf((uint8_t *)buf, MAXBUF);
 
         // print out bytes received
-        ipString = ipAddressToString(setupInfo->server);
-        printf("Server with ip: %s and port %d said it received %s\n", ipString,
-               ntohs(setupInfo->server->sin6_port), buf);
+        // ipString = ipAddressToString(setupInfo->server);
+        // printf("Server with ip: %s and port %d said it received %s\n", ipString,
+        //        ntohs(setupInfo->server->sin6_port), buf);
 
         // dataLen = safeRecvfrom(socketNum, buf, MAXBUF, 0,
         //                        (struct sockaddr *)&client, &clientAddrLen);
@@ -157,36 +155,40 @@ void talkToServer(setupInfo_t *setupInfo) {
         printf("DEBUG: Sequence Value: %x\n", udpHeader->sequenceNum);
 #endif
 
-        printf("Received message from client with ");
-        printIPInfo(&client);
-        printIPInfo(setupInfo->server);
-        printBuf((uint8_t *)&buf, dataLen);
-        printf(" Len: %d \'%s\'\n", dataLen, buf);
+        // printf("Received message from client with ");
+        // printIPInfo(&client);
+        // printIPInfo(setupInfo->server);
+        // printBuf((uint8_t *)&buf, dataLen);
+        // printf(" Len: %d \'%s\'\n", dataLen, buf);
 
-        switch (udpHeader->flag) {
-        case 5: // RR Packet
-            break;
-        case 6: // SREJ Packet
-            break;
-        case 8: // Connect from client to server
-            break;
-        case 9: // Connect response from server
-            break;
-        case 10: // Packet is EOF last packet
-            break;
-        case 16: // Regular data packet
-            printBuf((uint8_t *)buf, dataLen);
-            char buf[] = "MSG WAS RECEIVED";
-            sendData(buf, 17, 0, 9, setupInfo);
-            break;
-        case 17: // Resent data packet after SREJ
-            break;
-        case 18: // Resent data packet after timeout
-            break;
-        default:
-            printf("INFO: Flag not found %d\n", udpHeader->flag);
-            break;
-        }
+#ifdef DEBUG
+        printf("DEBUG: rcopy flag %d\n", udpHeader->flag);
+#endif
+        // switch (udpHeader->flag) {
+        // case 5: // RR Packet
+        //     break;
+        // case 6: // SREJ Packet
+        //     break;
+        // case 8: // Connect from client to server
+        //     break;
+        // case 9: // Connect response from server
+        //
+        //     break;
+        // case 10: // Packet is EOF last packet
+        //     break;
+        // case 16: // Regular data packet
+        //     printBuf((uint8_t *)buf, dataLen);
+        //     char buf[] = "MSG WAS RECEIVED";
+        //     sendData(buf, 17, 0, 9, setupInfo);
+        //     break;
+        // case 17: // Resent data packet after SREJ
+        //     break;
+        // case 18: // Resent data packet after timeout
+        //     break;
+        // default:
+        //     printf("INFO: Flag not found %d\n", udpHeader->flag);
+        //     break;
+        // }
     }
 }
 

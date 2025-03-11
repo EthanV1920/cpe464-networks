@@ -13,15 +13,14 @@
 #include "checksum.h"
 #include "docs/libcpe464_2_21b/libcpe464/networks/network-hooks.h"
 #include "gethostbyname.h"
+#include "net_struct.h"
 #include "networks.h"
 #include "pollLib.h"
 #include "printBuf.h"
 #include "safeUtil.h"
 #include "sendData.h"
-#include "net_struct.h"
 
 #define MAXBUF 1407
-
 
 void processClient(int socketNum);
 void handleZombies(int sig);
@@ -60,6 +59,16 @@ void processClient(int socketNum) {
     uint8_t pidCount = 0;
     int pid = -1;
     setupInfo_t setupInfo;
+    int upper = setupInfo.windowSize;
+    int lower = 0;
+    int current = 0;
+    int seq = 0;
+    FILE *fp = NULL;
+    // char *window[setupInfo.windowSize];
+    // for (int i = 0; i < setupInfo.windowSize; i++) {
+    //
+    //     window[i] = malloc(setupInfo.bufferSize * sizeof(char));
+    // }
 
     buf[0] = '\0';
     while (buf[0] != '.') {
@@ -86,6 +95,8 @@ void processClient(int socketNum) {
         printBuf((uint8_t *)&buf, dataLen);
         printf(" Len: %d \'%s\'\n", dataLen, buf);
 
+        int rr = 0;
+
         switch (udpHeader->flag) {
             // Then in main add :
             //
@@ -97,6 +108,10 @@ void processClient(int socketNum) {
             //     signal(SIGCHLD, handleZombies);
 
         case 5: // RR Packet
+#ifdef DEBUG
+            printf("DEBUG: RR received\n");
+#endif
+            rr++;
             break;
         case 6: // SREJ Packet
             break;
@@ -120,7 +135,7 @@ void processClient(int socketNum) {
                 fileName[100] = '\0';
                 printf("INFO: FileName: %s\n", fileName);
 
-                FILE *fp = fopen(fileName, "r");
+                fp = fopen(fileName, "r");
                 if (fp != 0) {
 
 #ifdef DEBUG
@@ -129,6 +144,12 @@ void processClient(int socketNum) {
 #endif
                     char buf[] = "GOOD FILE";
                     sendData(buf, 1, 0, 9, &setupInfo);
+
+                    while (fread(buf, 1, 10, fp)) {
+                        // fread(window[seq++], sizeof(char),
+                        // setupInfo.bufferSize, fp); fread(buf, 1, 10, fp);
+                        sendData(buf, 10, seq++, 16, &setupInfo);
+                    }
 
                 } else {
 
@@ -163,6 +184,12 @@ void processClient(int socketNum) {
             break;
         }
 
+        // if (rr > lower) {
+        // while (fread(buf,1,10,fp)) {
+        //     // fread(window[seq++], sizeof(char), setupInfo.bufferSize, fp);
+        //     // fread(buf, 1, 10, fp);
+        //     sendData(buf, 10, seq++, 16, &setupInfo);
+        // }
         // just for fun send back to client number of bytes received
         // sprintf(buf, "bytes: %d", dataLen);
         // safeSendto(socketNum, buf, strlen(buf) + 1, 0,
